@@ -7,6 +7,10 @@ import reactor.core.publisher.Mono;
 
 /**
  * Puerto de entrada: operaciones de negocio sobre franquicias.
+ *
+ * <p>Las sucursales y productos se identifican por {@code branchId}/{@code productId}
+ * (generados por el servidor al crearlos), no por su nombre: el nombre es un atributo de
+ * negocio mutable, no una identidad estable de recurso.
  */
 public interface FranchiseUseCase {
 
@@ -16,15 +20,15 @@ public interface FranchiseUseCase {
 
     Mono<Franchise> addBranch(String franchiseId, String branchName);
 
-    Mono<Franchise> updateBranchName(String franchiseId, String branchName, String newName);
+    Mono<Franchise> updateBranchName(String franchiseId, String branchId, String newName);
 
-    Mono<Franchise> addProduct(String franchiseId, String branchName, String productName, int stock);
+    Mono<Franchise> addProduct(String franchiseId, String branchId, String productName, int stock);
 
-    Mono<Franchise> removeProduct(String franchiseId, String branchName, String productName);
+    Mono<Franchise> removeProduct(String franchiseId, String branchId, String productId);
 
-    Mono<Franchise> updateProductStock(String franchiseId, String branchName, String productName, int stock);
+    Mono<Franchise> updateProductStock(String franchiseId, String branchId, String productId, int stock);
 
-    Mono<Franchise> updateProductName(String franchiseId, String branchName, String productName, String newName);
+    Mono<Franchise> updateProductName(String franchiseId, String branchId, String productId, String newName);
 
     Flux<TopStockProduct> topStockProducts(String franchiseId);
 }

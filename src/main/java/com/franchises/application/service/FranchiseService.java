@@ -16,6 +16,7 @@ import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 
 import java.time.Duration;
+import java.util.UUID;
 import java.util.function.BiFunction;
 
 @Service
@@ -49,52 +50,50 @@ public class FranchiseService implements FranchiseUseCase {
     @Override
     public Mono<Franchise> addBranch(String franchiseId, String branchName) {
         return findFranchise(franchiseId)
-                .flatMap(franchise -> franchise.hasBranch(branchName)
+                .flatMap(franchise -> franchise.hasBranchNamed(branchName)
                         ? Mono.error(duplicateBranch(branchName))
-                        : repository.save(franchise.addBranch(Branch.builder().name(branchName).build())))
+                        : repository.save(franchise.addBranch(newBranch(branchName))))
                 .retryWhen(CONCURRENCY_RETRY);
     }
 
     @Override
-    public Mono<Franchise> updateBranchName(String franchiseId, String branchName, String newName) {
-        return updateExistingBranch(franchiseId, branchName,
-                (franchise, branch) -> franchise.hasBranch(newName) && !branchName.equals(newName)
+    public Mono<Franchise> updateBranchName(String franchiseId, String branchId, String newName) {
+        return updateExistingBranch(franchiseId, branchId,
+                (franchise, branch) -> franchise.hasBranchNamed(newName) && !branch.getName().equals(newName)
                         ? Mono.error(duplicateBranch(newName))
                         : Mono.just(branch.withName(newName)));
     }
 
     @Override
-    public Mono<Franchise> addProduct(String franchiseId, String branchName, String productName, int stock) {
-        return updateExistingBranch(franchiseId, branchName,
-                (franchise, branch) -> branch.hasProduct(productName)
-                        ? Mono.error(duplicateProduct(productName, branchName))
-                        : Mono.just(branch.addProduct(Product.builder().name(productName).stock(stock).build())));
+    public Mono<Franchise> addProduct(String franchiseId, String branchId, String productName, int stock) {
+        return updateExistingBranch(franchiseId, branchId,
+                (franchise, branch) -> branch.hasProductNamed(productName)
+                        ? Mono.error(duplicateProduct(productName, branch.getName()))
+                        : Mono.just(branch.addProduct(newProduct(productName, stock))));
     }
 
     @Override
-    public Mono<Franchise> removeProduct(String franchiseId, String branchName, String productName) {
-        return updateExistingBranch(franchiseId, branchName,
-                (franchise, branch) -> branch.removeProduct(productName)
+    public Mono<Franchise> removeProduct(String franchiseId, String branchId, String productId) {
+        return updateExistingBranch(franchiseId, branchId,
+                (franchise, branch) -> branch.removeProductById(productId)
                         .map(Mono::just)
-                        .orElseGet(() -> Mono.error(productNotFound(productName, branchName))));
+                        .orElseGet(() -> Mono.error(productNotFound(productId, branch.getName()))));
     }
 
     @Override
-    public Mono<Franchise> updateProductStock(String franchiseId, String branchName, String productName, int stock) {
-        return updateExistingBranch(franchiseId, branchName,
-                (franchise, branch) -> branch.updateProduct(productName, product -> product.withStock(stock))
+    public Mono<Franchise> updateProductStock(String franchiseId, String branchId, String productId, int stock) {
+        return updateExistingBranch(franchiseId, branchId,
+                (franchise, branch) -> branch.updateProductById(productId, product -> product.withStock(stock))
                         .map(Mono::just)
-                        .orElseGet(() -> Mono.error(productNotFound(productName, branchName))));
+                        .orElseGet(() -> Mono.error(productNotFound(productId, branch.getName()))));
     }
 
     @Override
-    public Mono<Franchise> updateProductName(String franchiseId, String branchName, String productName, String newName) {
-        return updateExistingBranch(franchiseId, branchName,
-                (franchise, branch) -> branch.hasProduct(newName) && !productName.equals(newName)
-                        ? Mono.error(duplicateProduct(newName, branchName))
-                        : branch.updateProduct(productName, product -> product.withName(newName))
-                                .map(Mono::just)
-                                .orElseGet(() -> Mono.error(productNotFound(productName, branchName))));
+    public Mono<Franchise> updateProductName(String franchiseId, String branchId, String productId, String newName) {
+        return updateExistingBranch(franchiseId, branchId,
+                (franchise, branch) -> branch.findProductById(productId)
+                        .map(current -> renameProduct(branch, current, newName))
+                        .orElseGet(() -> Mono.error(productNotFound(productId, branch.getName()))));
     }
 
     @Override
@@ -103,32 +102,48 @@ public class FranchiseService implements FranchiseUseCase {
                 .flatMapIterable(Franchise::topStockProducts);
     }
 
+    private Mono<Branch> renameProduct(Branch branch, Product current, String newName) {
+        if (branch.hasProductNamed(newName) && !current.getName().equals(newName)) {
+            return Mono.error(duplicateProduct(newName, branch.getName()));
+        }
+        return Mono.just(branch.replaceProduct(current.withName(newName)));
+    }
+
+    private Branch newBranch(String name) {
+        return Branch.builder().id(UUID.randomUUID().toString()).name(name).build();
+    }
+
+    private Product newProduct(String name, int stock) {
+        return Product.builder().id(UUID.randomUUID().toString()).name(name).stock(stock).build();
+    }
+
     private Mono<Franchise> findFranchise(String franchiseId) {
         return repository.findById(franchiseId)
                 .switchIfEmpty(Mono.error(new NotFoundException("Franquicia no encontrada: " + franchiseId)));
     }
 
     /**
-     * Localiza la sucursal, aplica la operación de negocio y persiste el agregado resultante.
+     * Localiza la sucursal por id, aplica la operación de negocio y persiste el agregado
+     * resultante.
      */
-    private Mono<Franchise> updateExistingBranch(String franchiseId, String branchName,
+    private Mono<Franchise> updateExistingBranch(String franchiseId, String branchId,
             BiFunction<Franchise, Branch, Mono<Branch>> operation) {
         return findFranchise(franchiseId)
-                .flatMap(franchise -> franchise.findBranch(branchName)
+                .flatMap(franchise -> franchise.findBranchById(branchId)
                         .map(branch -> operation.apply(franchise, branch)
-                                .map(updated -> franchise.replaceBranch(branchName, updated))
+                                .map(updated -> franchise.replaceBranchById(branchId, updated))
                                 .flatMap(repository::save))
-                        .orElseGet(() -> Mono.error(branchNotFound(branchName))))
+                        .orElseGet(() -> Mono.error(branchNotFound(branchId))))
                 .retryWhen(CONCURRENCY_RETRY);
     }
 
-    private NotFoundException branchNotFound(String branchName) {
-        return new NotFoundException("Sucursal no encontrada: " + branchName);
+    private NotFoundException branchNotFound(String branchId) {
+        return new NotFoundException("Sucursal no encontrada: " + branchId);
     }
 
-    private NotFoundException productNotFound(String productName, String branchName) {
+    private NotFoundException productNotFound(String productId, String branchName) {
         return new NotFoundException(
-                "Producto no encontrado: " + productName + " en la sucursal " + branchName);
+                "Producto no encontrado: " + productId + " en la sucursal " + branchName);
     }
 
     private DuplicateResourceException duplicateBranch(String branchName) {
