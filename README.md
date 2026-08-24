@@ -94,6 +94,30 @@ docker compose down
 
 La URI de conexión puede sobrescribirse con la variable de entorno `MONGO_URI` y el puerto con `SERVER_PORT`.
 
+### Opción 3 — Aprovisionar la persistencia con Terraform (IaC)
+
+La base de datos también puede aprovisionarse de forma declarativa en lugar de con
+`docker-compose`. El API solo depende de `MONGO_URI`, así que la infraestructura es
+intercambiable:
+
+```bash
+cd infra/local
+terraform init
+terraform plan                              # muestra el diff, no aplica nada
+terraform apply
+export MONGO_URI=$(terraform output -raw mongo_uri)
+./mvnw spring-boot:run
+terraform destroy                           # limpieza total al terminar
+```
+
+`infra/atlas/` provisiona lo mismo sobre un clúster M0 (capa gratuita) de MongoDB
+Atlas, para quien quiera demostrarlo contra una nube real. Detalles en
+[`infra/README.md`](infra/README.md).
+
+> Terraform y `docker compose` son **alternativas**, no se ejecutan a la vez sobre el
+> mismo puerto 27017 (usa `-var mongo_port=27018` en `infra/local` si necesitas que
+> convivan).
+
 ## Pruebas y cobertura
 
 ```bash
