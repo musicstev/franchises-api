@@ -45,34 +45,34 @@ public class FranchiseHandler {
     public Mono<ServerResponse> updateBranchName(ServerRequest request) {
         return body(request, NameUpdateRequest.class)
                 .flatMap(dto -> franchiseUseCase.updateBranchName(
-                        franchiseId(request), branchName(request), dto.name()))
+                        franchiseId(request), branchId(request), dto.name()))
                 .flatMap(franchise -> respond(HttpStatus.OK, franchise));
     }
 
     public Mono<ServerResponse> addProduct(ServerRequest request) {
         return body(request, ProductRequest.class)
                 .flatMap(dto -> franchiseUseCase.addProduct(
-                        franchiseId(request), branchName(request), dto.name(), dto.stock()))
+                        franchiseId(request), branchId(request), dto.name(), dto.stock()))
                 .flatMap(franchise -> respond(HttpStatus.CREATED, franchise));
     }
 
     public Mono<ServerResponse> removeProduct(ServerRequest request) {
         return franchiseUseCase
-                .removeProduct(franchiseId(request), branchName(request), productName(request))
+                .removeProduct(franchiseId(request), branchId(request), productId(request))
                 .flatMap(franchise -> respond(HttpStatus.OK, franchise));
     }
 
     public Mono<ServerResponse> updateProductStock(ServerRequest request) {
         return body(request, StockUpdateRequest.class)
                 .flatMap(dto -> franchiseUseCase.updateProductStock(
-                        franchiseId(request), branchName(request), productName(request), dto.stock()))
+                        franchiseId(request), branchId(request), productId(request), dto.stock()))
                 .flatMap(franchise -> respond(HttpStatus.OK, franchise));
     }
 
     public Mono<ServerResponse> updateProductName(ServerRequest request) {
         return body(request, NameUpdateRequest.class)
                 .flatMap(dto -> franchiseUseCase.updateProductName(
-                        franchiseId(request), branchName(request), productName(request), dto.name()))
+                        franchiseId(request), branchId(request), productId(request), dto.name()))
                 .flatMap(franchise -> respond(HttpStatus.OK, franchise));
     }
 
@@ -100,11 +100,11 @@ public class FranchiseHandler {
         return request.pathVariable("franchiseId");
     }
 
-    private String branchName(ServerRequest request) {
-        return request.pathVariable("branchName");
+    private String branchId(ServerRequest request) {
+        return request.pathVariable("branchId");
     }
 
-    private String productName(ServerRequest request) {
-        return request.pathVariable("productName");
+    private String productId(ServerRequest request) {
+        return request.pathVariable("productId");
     }
 }

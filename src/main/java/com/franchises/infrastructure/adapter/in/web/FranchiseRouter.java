@@ -103,14 +103,14 @@ public class FranchiseRouter {
                                     @ApiResponse(responseCode = "409", description = CONFLICT,
                                             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
                             })),
-            @RouterOperation(path = "/api/franchises/{franchiseId}/branches/{branchName}/name",
+            @RouterOperation(path = "/api/franchises/{franchiseId}/branches/{branchId}/name",
                     method = RequestMethod.PATCH,
                     beanClass = FranchiseHandler.class, beanMethod = "updateBranchName",
                     operation = @Operation(operationId = "updateBranchName",
                             summary = "Actualizar el nombre de una sucursal",
                             parameters = {
                                     @Parameter(name = "franchiseId", in = ParameterIn.PATH, required = true),
-                                    @Parameter(name = "branchName", in = ParameterIn.PATH, required = true)
+                                    @Parameter(name = "branchId", in = ParameterIn.PATH, required = true)
                             },
                             requestBody = @RequestBody(required = true,
                                     content = @Content(schema = @Schema(implementation = NameUpdateRequest.class))),
@@ -122,13 +122,13 @@ public class FranchiseRouter {
                                     @ApiResponse(responseCode = "409", description = CONFLICT,
                                             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
                             })),
-            @RouterOperation(path = "/api/franchises/{franchiseId}/branches/{branchName}/products",
+            @RouterOperation(path = "/api/franchises/{franchiseId}/branches/{branchId}/products",
                     method = RequestMethod.POST,
                     beanClass = FranchiseHandler.class, beanMethod = "addProduct",
                     operation = @Operation(operationId = "addProduct", summary = "Agregar un producto a la sucursal",
                             parameters = {
                                     @Parameter(name = "franchiseId", in = ParameterIn.PATH, required = true),
-                                    @Parameter(name = "branchName", in = ParameterIn.PATH, required = true)
+                                    @Parameter(name = "branchId", in = ParameterIn.PATH, required = true)
                             },
                             requestBody = @RequestBody(required = true,
                                     content = @Content(schema = @Schema(implementation = ProductRequest.class))),
@@ -140,14 +140,14 @@ public class FranchiseRouter {
                                     @ApiResponse(responseCode = "409", description = CONFLICT,
                                             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
                             })),
-            @RouterOperation(path = "/api/franchises/{franchiseId}/branches/{branchName}/products/{productName}",
+            @RouterOperation(path = "/api/franchises/{franchiseId}/branches/{branchId}/products/{productId}",
                     method = RequestMethod.DELETE,
                     beanClass = FranchiseHandler.class, beanMethod = "removeProduct",
                     operation = @Operation(operationId = "removeProduct", summary = "Eliminar un producto de la sucursal",
                             parameters = {
                                     @Parameter(name = "franchiseId", in = ParameterIn.PATH, required = true),
-                                    @Parameter(name = "branchName", in = ParameterIn.PATH, required = true),
-                                    @Parameter(name = "productName", in = ParameterIn.PATH, required = true)
+                                    @Parameter(name = "branchId", in = ParameterIn.PATH, required = true),
+                                    @Parameter(name = "productId", in = ParameterIn.PATH, required = true)
                             },
                             responses = {
                                     @ApiResponse(responseCode = "200", description = "Producto eliminado",
@@ -155,14 +155,14 @@ public class FranchiseRouter {
                                     @ApiResponse(responseCode = "404", description = NOT_FOUND,
                                             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
                             })),
-            @RouterOperation(path = "/api/franchises/{franchiseId}/branches/{branchName}/products/{productName}/stock",
+            @RouterOperation(path = "/api/franchises/{franchiseId}/branches/{branchId}/products/{productId}/stock",
                     method = RequestMethod.PATCH,
                     beanClass = FranchiseHandler.class, beanMethod = "updateProductStock",
                     operation = @Operation(operationId = "updateProductStock", summary = "Modificar el stock de un producto",
                             parameters = {
                                     @Parameter(name = "franchiseId", in = ParameterIn.PATH, required = true),
-                                    @Parameter(name = "branchName", in = ParameterIn.PATH, required = true),
-                                    @Parameter(name = "productName", in = ParameterIn.PATH, required = true)
+                                    @Parameter(name = "branchId", in = ParameterIn.PATH, required = true),
+                                    @Parameter(name = "productId", in = ParameterIn.PATH, required = true)
                             },
                             requestBody = @RequestBody(required = true,
                                     content = @Content(schema = @Schema(implementation = StockUpdateRequest.class))),
@@ -174,14 +174,14 @@ public class FranchiseRouter {
                                     @ApiResponse(responseCode = "400", description = BAD_REQUEST,
                                             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
                             })),
-            @RouterOperation(path = "/api/franchises/{franchiseId}/branches/{branchName}/products/{productName}/name",
+            @RouterOperation(path = "/api/franchises/{franchiseId}/branches/{branchId}/products/{productId}/name",
                     method = RequestMethod.PATCH,
                     beanClass = FranchiseHandler.class, beanMethod = "updateProductName",
                     operation = @Operation(operationId = "updateProductName", summary = "Actualizar el nombre de un producto",
                             parameters = {
                                     @Parameter(name = "franchiseId", in = ParameterIn.PATH, required = true),
-                                    @Parameter(name = "branchName", in = ParameterIn.PATH, required = true),
-                                    @Parameter(name = "productName", in = ParameterIn.PATH, required = true)
+                                    @Parameter(name = "branchId", in = ParameterIn.PATH, required = true),
+                                    @Parameter(name = "productId", in = ParameterIn.PATH, required = true)
                             },
                             requestBody = @RequestBody(required = true,
                                     content = @Content(schema = @Schema(implementation = NameUpdateRequest.class))),
@@ -200,13 +200,13 @@ public class FranchiseRouter {
                         .andRoute(PATCH("/{franchiseId}/name"), handler::updateFranchiseName)
                         .andRoute(GET("/{franchiseId}/top-stock-products"), handler::topStockProducts)
                         .andRoute(POST("/{franchiseId}/branches"), handler::addBranch)
-                        .andRoute(PATCH("/{franchiseId}/branches/{branchName}/name"), handler::updateBranchName)
-                        .andRoute(POST("/{franchiseId}/branches/{branchName}/products"), handler::addProduct)
-                        .andRoute(DELETE("/{franchiseId}/branches/{branchName}/products/{productName}"),
+                        .andRoute(PATCH("/{franchiseId}/branches/{branchId}/name"), handler::updateBranchName)
+                        .andRoute(POST("/{franchiseId}/branches/{branchId}/products"), handler::addProduct)
+                        .andRoute(DELETE("/{franchiseId}/branches/{branchId}/products/{productId}"),
                                 handler::removeProduct)
-                        .andRoute(PATCH("/{franchiseId}/branches/{branchName}/products/{productName}/stock"),
+                        .andRoute(PATCH("/{franchiseId}/branches/{branchId}/products/{productId}/stock"),
                                 handler::updateProductStock)
-                        .andRoute(PATCH("/{franchiseId}/branches/{branchName}/products/{productName}/name"),
+                        .andRoute(PATCH("/{franchiseId}/branches/{branchId}/products/{productId}/name"),
                                 handler::updateProductName));
     }
 }
