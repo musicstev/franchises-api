@@ -163,6 +163,21 @@ Con el API corriendo, la documentación interactiva (OpenAPI 3) está disponible
 
 Desde Swagger UI puedes explorar cada endpoint (parámetros, esquemas de request/response, códigos de error) y ejecutar peticiones de prueba directamente contra el API en ejecución.
 
+## Colección de Postman
+
+El repositorio incluye [`postman-collection.json`](postman-collection.json) con los 9 endpoints listos para ejecutar en orden (crear franquicia → agregar sucursal → agregar producto → consultas y actualizaciones).
+
+**Importarla:**
+
+1. En Postman: `File → Import` y selecciona `postman-collection.json`.
+2. Verifica que la variable de colección `baseUrl` apunte a tu API (por defecto `http://localhost:8080`).
+
+**Cómo está armada:**
+
+- La petición **"Crear franquicia"** guarda automáticamente el `id` de la respuesta en la variable de colección `franchiseId` (vía un script de test), así que el resto de peticiones lo reutilizan sin copiar/pegar nada.
+- Las variables `branchName` y `productName` vienen precargadas (`Sucursal Chapinero`, `Café Americano`) y se usan tal cual en las rutas — edítalas si quieres apuntar a otra sucursal/producto.
+- Orden sugerido de ejecución: Crear franquicia → Agregar sucursal → Agregar producto → el resto de peticiones (actualizar nombres, modificar stock, eliminar producto, producto con más stock por sucursal) en cualquier orden.
+
 ## Endpoints
 
 Base: `http://localhost:8080/api/franchises`
