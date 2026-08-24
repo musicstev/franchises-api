@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "e2b6c9a0-6f2a-4b7e-9c0d-franchises-api",
     "name": "Franchises API",
-    "description": "API reactiva para la gestión de franquicias, sus sucursales y los productos ofertados en cada sucursal.\n\nBase: {{baseUrl}}/api/franchises",
+    "description": "API reactiva para la gestión de franquicias, sus sucursales y los productos ofertados en cada sucursal.\n\nBase: {{baseUrl}}/api/franchises\n\nLas sucursales y productos se identifican por un `id` generado por el servidor (no por su nombre). Las peticiones 'Crear franquicia', 'Agregar sucursal' y 'Agregar producto' capturan automáticamente esos ids en variables de colección; el resto de peticiones los reutiliza.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -13,6 +13,16 @@
     },
     {
       "key": "franchiseId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "branchId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "productId",
       "value": "",
       "type": "string"
     },
@@ -87,6 +97,23 @@
     },
     {
       "name": "Agregar sucursal",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code === 201 || pm.response.code === 200) {",
+              "    const body = pm.response.json();",
+              "    const last = body.branches && body.branches[body.branches.length - 1];",
+              "    if (last && last.id) {",
+              "        pm.collectionVariables.set('branchId', last.id);",
+              "    }",
+              "}"
+            ]
+          }
+        }
+      ],
       "request": {
         "method": "POST",
         "header": [
@@ -101,7 +128,8 @@
           "raw": "{{baseUrl}}/api/franchises/{{franchiseId}}/branches",
           "host": ["{{baseUrl}}"],
           "path": ["api", "franchises", "{{franchiseId}}", "branches"]
-        }
+        },
+        "description": "Agrega una sucursal. Guarda automáticamente el `id` generado en la variable de colección `branchId`."
       },
       "response": []
     },
@@ -118,15 +146,33 @@
           "options": { "raw": { "language": "json" } }
         },
         "url": {
-          "raw": "{{baseUrl}}/api/franchises/{{franchiseId}}/branches/{{branchName}}/name",
+          "raw": "{{baseUrl}}/api/franchises/{{franchiseId}}/branches/{{branchId}}/name",
           "host": ["{{baseUrl}}"],
-          "path": ["api", "franchises", "{{franchiseId}}", "branches", "{{branchName}}", "name"]
+          "path": ["api", "franchises", "{{franchiseId}}", "branches", "{{branchId}}", "name"]
         }
       },
       "response": []
     },
     {
       "name": "Agregar producto",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code === 201 || pm.response.code === 200) {",
+              "    const body = pm.response.json();",
+              "    const branch = (body.branches || []).find(b => b.id === pm.collectionVariables.get('branchId'));",
+              "    const last = branch && branch.products && branch.products[branch.products.length - 1];",
+              "    if (last && last.id) {",
+              "        pm.collectionVariables.set('productId', last.id);",
+              "    }",
+              "}"
+            ]
+          }
+        }
+      ],
       "request": {
         "method": "POST",
         "header": [
@@ -138,10 +184,11 @@
           "options": { "raw": { "language": "json" } }
         },
         "url": {
-          "raw": "{{baseUrl}}/api/franchises/{{franchiseId}}/branches/{{branchName}}/products",
+          "raw": "{{baseUrl}}/api/franchises/{{franchiseId}}/branches/{{branchId}}/products",
           "host": ["{{baseUrl}}"],
-          "path": ["api", "franchises", "{{franchiseId}}", "branches", "{{branchName}}", "products"]
-        }
+          "path": ["api", "franchises", "{{franchiseId}}", "branches", "{{branchId}}", "products"]
+        },
+        "description": "Agrega un producto a la sucursal. Guarda automáticamente el `id` generado en la variable de colección `productId`."
       },
       "response": []
     },
@@ -158,9 +205,9 @@
           "options": { "raw": { "language": "json" } }
         },
         "url": {
-          "raw": "{{baseUrl}}/api/franchises/{{franchiseId}}/branches/{{branchName}}/products/{{productName}}/stock",
+          "raw": "{{baseUrl}}/api/franchises/{{franchiseId}}/branches/{{branchId}}/products/{{productId}}/stock",
           "host": ["{{baseUrl}}"],
-          "path": ["api", "franchises", "{{franchiseId}}", "branches", "{{branchName}}", "products", "{{productName}}", "stock"]
+          "path": ["api", "franchises", "{{franchiseId}}", "branches", "{{branchId}}", "products", "{{productId}}", "stock"]
         }
       },
       "response": []
@@ -178,9 +225,9 @@
           "options": { "raw": { "language": "json" } }
         },
         "url": {
-          "raw": "{{baseUrl}}/api/franchises/{{franchiseId}}/branches/{{branchName}}/products/{{productName}}/name",
+          "raw": "{{baseUrl}}/api/franchises/{{franchiseId}}/branches/{{branchId}}/products/{{productId}}/name",
           "host": ["{{baseUrl}}"],
-          "path": ["api", "franchises", "{{franchiseId}}", "branches", "{{branchName}}", "products", "{{productName}}", "name"]
+          "path": ["api", "franchises", "{{franchiseId}}", "branches", "{{branchId}}", "products", "{{productId}}", "name"]
         }
       },
       "response": []
@@ -191,9 +238,9 @@
         "method": "DELETE",
         "header": [],
         "url": {
-          "raw": "{{baseUrl}}/api/franchises/{{franchiseId}}/branches/{{branchName}}/products/{{productName}}",
+          "raw": "{{baseUrl}}/api/franchises/{{franchiseId}}/branches/{{branchId}}/products/{{productId}}",
           "host": ["{{baseUrl}}"],
-          "path": ["api", "franchises", "{{franchiseId}}", "branches", "{{branchName}}", "products", "{{productName}}"]
+          "path": ["api", "franchises", "{{franchiseId}}", "branches", "{{branchId}}", "products", "{{productId}}"]
         }
       },
       "response": []

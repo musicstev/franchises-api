@@ -174,8 +174,8 @@ El repositorio incluye [`postman-collection.json`](postman-collection.json) con 
 
 **Cómo está armada:**
 
-- La petición **"Crear franquicia"** guarda automáticamente el `id` de la respuesta en la variable de colección `franchiseId` (vía un script de test), así que el resto de peticiones lo reutilizan sin copiar/pegar nada.
-- Las variables `branchName` y `productName` vienen precargadas (`Sucursal Chapinero`, `Café Americano`) y se usan tal cual en las rutas — edítalas si quieres apuntar a otra sucursal/producto.
+- Las peticiones **"Crear franquicia"**, **"Agregar sucursal"** y **"Agregar producto"** guardan automáticamente el `id` generado por el servidor en las variables de colección `franchiseId`, `branchId` y `productId` (vía scripts de test), así que el resto de peticiones los reutilizan sin copiar/pegar nada.
+- Las variables `branchName` y `productName` vienen precargadas (`Sucursal Chapinero`, `Café Americano`) y se usan como el **nombre** enviado en el cuerpo de las peticiones de creación/renombrado — no como identificador de URL (ver "Decisiones de diseño" más abajo).
 - Orden sugerido de ejecución: Crear franquicia → Agregar sucursal → Agregar producto → el resto de peticiones (actualizar nombres, modificar stock, eliminar producto, producto con más stock por sucursal) en cualquier orden.
 
 ## Endpoints
@@ -187,14 +187,14 @@ Base: `http://localhost:8080/api/franchises`
 | `POST` | `/api/franchises` | Crear una franquicia |
 | `PATCH` | `/api/franchises/{franchiseId}/name` | Actualizar el nombre de una franquicia |
 | `POST` | `/api/franchises/{franchiseId}/branches` | Agregar una sucursal a la franquicia |
-| `PATCH` | `/api/franchises/{franchiseId}/branches/{branchName}/name` | Actualizar el nombre de una sucursal |
-| `POST` | `/api/franchises/{franchiseId}/branches/{branchName}/products` | Agregar un producto a la sucursal |
-| `DELETE` | `/api/franchises/{franchiseId}/branches/{branchName}/products/{productName}` | Eliminar un producto de la sucursal |
-| `PATCH` | `/api/franchises/{franchiseId}/branches/{branchName}/products/{productName}/stock` | Modificar el stock de un producto |
-| `PATCH` | `/api/franchises/{franchiseId}/branches/{branchName}/products/{productName}/name` | Actualizar el nombre de un producto |
+| `PATCH` | `/api/franchises/{franchiseId}/branches/{branchId}/name` | Actualizar el nombre de una sucursal |
+| `POST` | `/api/franchises/{franchiseId}/branches/{branchId}/products` | Agregar un producto a la sucursal |
+| `DELETE` | `/api/franchises/{franchiseId}/branches/{branchId}/products/{productId}` | Eliminar un producto de la sucursal |
+| `PATCH` | `/api/franchises/{franchiseId}/branches/{branchId}/products/{productId}/stock` | Modificar el stock de un producto |
+| `PATCH` | `/api/franchises/{franchiseId}/branches/{branchId}/products/{productId}/name` | Actualizar el nombre de un producto |
 | `GET` | `/api/franchises/{franchiseId}/top-stock-products` | Producto con más stock por sucursal de la franquicia |
 
-Las sucursales y productos se identifican por su nombre dentro de la franquicia (codifícalo en la URL si contiene espacios, p. ej. `Sucursal%20Centro`).
+Sucursales y productos se identifican por un `id` generado por el servidor al crearlos (igual que la franquicia), no por su nombre — captura el `id` de la respuesta de creación y úsalo en las peticiones siguientes. Ver [Decisiones de diseño](#decisiones-de-diseño).
 
 ### Ejemplos con `curl`
 
@@ -204,28 +204,28 @@ Crear una franquicia (la respuesta incluye el `id` generado, úsalo en el resto 
 curl -s -X POST http://localhost:8080/api/franchises -H 'Content-Type: application/json' -d '{"name":"Mi Franquicia"}'
 ```
 
-Agregar una sucursal:
+Agregar una sucursal (la respuesta incluye `branches[].id`, captúralo para las siguientes peticiones):
 
 ```bash
 curl -s -X POST http://localhost:8080/api/franchises/{franchiseId}/branches -H 'Content-Type: application/json' -d '{"name":"Sucursal Centro"}'
 ```
 
-Agregar un producto:
+Agregar un producto (la respuesta incluye `branches[].products[].id`):
 
 ```bash
-curl -s -X POST http://localhost:8080/api/franchises/{franchiseId}/branches/Sucursal%20Centro/products -H 'Content-Type: application/json' -d '{"name":"Café","stock":25}'
+curl -s -X POST http://localhost:8080/api/franchises/{franchiseId}/branches/{branchId}/products -H 'Content-Type: application/json' -d '{"name":"Café","stock":25}'
 ```
 
 Modificar el stock:
 
 ```bash
-curl -s -X PATCH http://localhost:8080/api/franchises/{franchiseId}/branches/Sucursal%20Centro/products/Café/stock -H 'Content-Type: application/json' -d '{"stock":40}'
+curl -s -X PATCH http://localhost:8080/api/franchises/{franchiseId}/branches/{branchId}/products/{productId}/stock -H 'Content-Type: application/json' -d '{"stock":40}'
 ```
 
 Eliminar un producto:
 
 ```bash
-curl -s -X DELETE http://localhost:8080/api/franchises/{franchiseId}/branches/Sucursal%20Centro/products/Café
+curl -s -X DELETE http://localhost:8080/api/franchises/{franchiseId}/branches/{branchId}/products/{productId}
 ```
 
 Producto con más stock por sucursal:
@@ -234,19 +234,29 @@ Producto con más stock por sucursal:
 curl -s http://localhost:8080/api/franchises/{franchiseId}/top-stock-products
 ```
 
-Renombrar franquicia / sucursal / producto:
+Renombrar franquicia / sucursal / producto (la URL no cambia al renombrar, precisamente porque direcciona por `id`):
 
 ```bash
 curl -s -X PATCH http://localhost:8080/api/franchises/{franchiseId}/name -H 'Content-Type: application/json' -d '{"name":"Nueva Marca"}'
 ```
 
 ```bash
-curl -s -X PATCH http://localhost:8080/api/franchises/{franchiseId}/branches/Sucursal%20Centro/name -H 'Content-Type: application/json' -d '{"name":"Centro Histórico"}'
+curl -s -X PATCH http://localhost:8080/api/franchises/{franchiseId}/branches/{branchId}/name -H 'Content-Type: application/json' -d '{"name":"Centro Histórico"}'
 ```
 
 ```bash
-curl -s -X PATCH http://localhost:8080/api/franchises/{franchiseId}/branches/Sucursal%20Centro/products/Café/name -H 'Content-Type: application/json' -d '{"name":"Café Premium"}'
+curl -s -X PATCH http://localhost:8080/api/franchises/{franchiseId}/branches/{branchId}/products/{productId}/name -H 'Content-Type: application/json' -d '{"name":"Café Premium"}'
 ```
+
+## Decisiones de diseño
+
+### Identificación de sucursales y productos
+
+El enunciado describe la sucursal y el producto únicamente con `nombre` (y su lista/stock), sin un identificador explícito. La primera versión de este API direccionaba ambos por nombre en la URL, consistente con esa descripción literal.
+
+Al probar la API con casos límite (nombres con `/`, duplicados que difieren solo en mayúsculas o espacios) identifiqué que usar un atributo de negocio mutable como clave de dirección viola un principio básico de REST: la URI de un recurso debe ser estable e independiente de sus atributos. La franquicia ya seguía el patrón correcto (`id` generado por Mongo); sucursales y productos no.
+
+**Decisión:** alinear ambos con el mismo estándar — `id` generado por el servidor (UUID) como identificador estable, `name` como atributo mutable normal. Ventajas: las URLs no cambian al renombrar, sin ambigüedad de mayúsculas/espacios, sin caracteres reservados de URL en el identificador. El nombre sigue siendo único dentro de su padre (409 en duplicados), pero como regla de negocio, no como mecanismo de direccionamiento.
 
 ## Manejo de errores
 
