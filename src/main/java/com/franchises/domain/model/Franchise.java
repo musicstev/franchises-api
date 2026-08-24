@@ -11,6 +11,9 @@ import java.util.stream.Stream;
 /**
  * Raíz de agregado del dominio: una franquicia con sus sucursales.
  * Inmutable: toda modificación produce una nueva instancia.
+ *
+ * <p>Las sucursales se buscan y modifican por {@code id}; el nombre solo se usa para la
+ * regla de negocio de no permitir nombres duplicados dentro de la misma franquicia.
  */
 @Value
 @Builder(toBuilder = true)
@@ -31,13 +34,13 @@ public class Franchise {
     @Builder.Default
     List<Branch> branches = List.of();
 
-    public boolean hasBranch(String branchName) {
+    public boolean hasBranchNamed(String branchName) {
         return branches.stream().anyMatch(branch -> branch.getName().equals(branchName));
     }
 
-    public Optional<Branch> findBranch(String branchName) {
+    public Optional<Branch> findBranchById(String branchId) {
         return branches.stream()
-                .filter(branch -> branch.getName().equals(branchName))
+                .filter(branch -> branch.getId().equals(branchId))
                 .findFirst();
     }
 
@@ -48,12 +51,12 @@ public class Franchise {
     }
 
     /**
-     * Sustituye la sucursal identificada por {@code branchName} por {@code replacement}.
+     * Sustituye la sucursal identificada por {@code branchId} por {@code replacement}.
      */
-    public Franchise replaceBranch(String branchName, Branch replacement) {
+    public Franchise replaceBranchById(String branchId, Branch replacement) {
         return toBuilder()
                 .branches(branches.stream()
-                        .map(branch -> branch.getName().equals(branchName) ? replacement : branch)
+                        .map(branch -> branch.getId().equals(branchId) ? replacement : branch)
                         .toList())
                 .build();
     }
