@@ -1,5 +1,7 @@
 # Franchises API
 
+[![CI](https://github.com/musicstev/franchises-api/actions/workflows/ci.yml/badge.svg)](https://github.com/musicstev/franchises-api/actions/workflows/ci.yml)
+
 API reactiva para la gestión de franquicias, sus sucursales y los productos ofertados en cada sucursal.
 
 **Autor:** William Gomez
@@ -10,8 +12,9 @@ API reactiva para la gestión de franquicias, sus sucursales y los productos ofe
 - **MongoDB** (driver reactivo de Spring Data)
 - **Lombok** (modelos inmutables con `@Value`, `@Builder`, `@With`)
 - **Arquitectura hexagonal** (puertos y adaptadores)
-- **JaCoCo** con verificación de cobertura mínima del **95%**
+- **JaCoCo** con verificación de cobertura mínima del **95%** + pruebas de integración con **Testcontainers**
 - **Docker** y **Docker Compose** para el empaquetado y despliegue local
+- **GitHub Actions** ejecuta `./mvnw verify` en cada push/PR
 
 ## Arquitectura
 
@@ -43,8 +46,7 @@ Para ejecutar con Docker (recomendado) solo necesitas:
 
 Para ejecutar en local sin Docker:
 
-- Java 21 (JDK)
-- Maven 3.9+
+- Java 21 (JDK) — no hace falta instalar Maven: el proyecto incluye el wrapper (`./mvnw`)
 - Una instancia de MongoDB accesible (por defecto `mongodb://localhost:27017/franchises`)
 
 ## Despliegue local
@@ -87,7 +89,7 @@ docker compose down
 2. Ejecuta la aplicación:
 
    ```bash
-   mvn spring-boot:run
+   ./mvnw spring-boot:run
    ```
 
 La URI de conexión puede sobrescribirse con la variable de entorno `MONGO_URI` y el puerto con `SERVER_PORT`.
@@ -95,17 +97,38 @@ La URI de conexión puede sobrescribirse con la variable de entorno `MONGO_URI` 
 ## Pruebas y cobertura
 
 ```bash
-mvn verify
+./mvnw verify
 ```
 
-Ejecuta las pruebas unitarias y genera el reporte de cobertura de JaCoCo en
-`target/site/jacoco/index.html`. La build **falla** si la cobertura de instrucciones es inferior al **95%**.
+Esto ejecuta, en orden:
 
-Si no tienes Maven/Java instalados, puedes ejecutar las pruebas dentro de Docker:
+1. **Pruebas unitarias** (Surefire, fase `test`) — dominio, aplicación e infraestructura con mocks. Rápidas, no requieren Docker.
+2. **Prueba de integración** (Failsafe, fase `verify`, sufijo `*IT`) — levanta un **MongoDB real** con [Testcontainers](https://testcontainers.com/) y valida contra él el mapeo del agregado y el bloqueo optimista (`@Version`). Requiere Docker en ejecución.
+3. **Verificación de cobertura** (JaCoCo) — la build **falla** si la cobertura de instrucciones cae por debajo del **95%**.
+
+El reporte de cobertura queda en `target/site/jacoco/index.html`.
+
+Para correr solo las pruebas rápidas (sin Docker):
 
 ```bash
-docker run --rm -v "$PWD":/workspace -w /workspace maven:3.9.9-eclipse-temurin-21 mvn verify
+./mvnw test
 ```
+
+Si no tienes Java instalado, puedes ejecutar todo dentro de Docker (monta el socket para que Testcontainers pueda levantar contenedores):
+
+```bash
+docker run --rm -v "$PWD":/workspace -v /var/run/docker.sock:/var/run/docker.sock \
+  -w /workspace eclipse-temurin:21-jdk ./mvnw verify
+```
+
+> **Nota (Colima / Rancher Desktop / Podman):** si Testcontainers falla con *"Could not find a valid Docker environment"* o al arrancar el contenedor `ryuk`, es un problema conocido de negociación del API de Docker y de montaje del socket en daemons que no son Docker Desktop. Soluciones:
+>
+> ```bash
+> echo "api.version=1.41" > ~/.docker-java.properties
+> export TESTCONTAINERS_RYUK_DISABLED=true
+> ```
+>
+> No hace falta en GitHub Actions (Docker nativo, sin este problema) ni en Docker Desktop.
 
 ## Documentación API (Swagger)
 
