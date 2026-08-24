@@ -33,6 +33,10 @@ import static org.mockito.Mockito.when;
 class FranchiseServiceTest {
 
     private static final String FRANCHISE_ID = "f-1";
+    private static final String CENTRO_ID = "b-centro";
+    private static final String NORTE_ID = "b-norte";
+    private static final String CAFE_ID = "p-cafe";
+    private static final String PAN_ID = "p-pan";
 
     @Mock
     private FranchiseRepository repository;
@@ -49,12 +53,13 @@ class FranchiseServiceTest {
                 .name("Mi Franquicia")
                 .branches(List.of(
                         Branch.builder()
+                                .id(CENTRO_ID)
                                 .name("Centro")
                                 .products(List.of(
-                                        Product.builder().name("Café").stock(10).build(),
-                                        Product.builder().name("Pan").stock(25).build()))
+                                        Product.builder().id(CAFE_ID).name("Café").stock(10).build(),
+                                        Product.builder().id(PAN_ID).name("Pan").stock(25).build()))
                                 .build(),
-                        Branch.builder().name("Norte").build()))
+                        Branch.builder().id(NORTE_ID).name("Norte").build()))
                 .build();
         lenient().when(repository.save(any(Franchise.class)))
                 .thenAnswer(invocation -> Mono.just(invocation.getArgument(0)));
@@ -99,17 +104,21 @@ class FranchiseServiceTest {
     }
 
     @Test
-    @DisplayName("addBranch agrega una sucursal nueva")
+    @DisplayName("addBranch agrega una sucursal nueva con un id generado")
     void addBranch() {
         givenFranchiseExists();
 
         StepVerifier.create(service.addBranch(FRANCHISE_ID, "Sur"))
-                .assertNext(saved -> assertThat(saved.hasBranch("Sur")).isTrue())
+                .assertNext(saved -> {
+                    Branch added = saved.getBranches().get(saved.getBranches().size() - 1);
+                    assertThat(added.getName()).isEqualTo("Sur");
+                    assertThat(added.getId()).isNotBlank();
+                })
                 .verifyComplete();
     }
 
     @Test
-    @DisplayName("addBranch falla cuando la sucursal ya existe")
+    @DisplayName("addBranch falla cuando ya existe una sucursal con ese nombre")
     void addBranchDuplicate() {
         givenFranchiseExists();
 
@@ -127,15 +136,13 @@ class FranchiseServiceTest {
     }
 
     @Test
-    @DisplayName("updateBranchName renombra la sucursal")
+    @DisplayName("updateBranchName renombra la sucursal identificada por id")
     void updateBranchName() {
         givenFranchiseExists();
 
-        StepVerifier.create(service.updateBranchName(FRANCHISE_ID, "Centro", "Centro Histórico"))
-                .assertNext(saved -> {
-                    assertThat(saved.hasBranch("Centro Histórico")).isTrue();
-                    assertThat(saved.hasBranch("Centro")).isFalse();
-                })
+        StepVerifier.create(service.updateBranchName(FRANCHISE_ID, CENTRO_ID, "Centro Histórico"))
+                .assertNext(saved -> assertThat(saved.findBranchById(CENTRO_ID).orElseThrow().getName())
+                        .isEqualTo("Centro Histórico"))
                 .verifyComplete();
     }
 
@@ -144,39 +151,42 @@ class FranchiseServiceTest {
     void updateBranchNameSameName() {
         givenFranchiseExists();
 
-        StepVerifier.create(service.updateBranchName(FRANCHISE_ID, "Centro", "Centro"))
-                .assertNext(saved -> assertThat(saved.hasBranch("Centro")).isTrue())
+        StepVerifier.create(service.updateBranchName(FRANCHISE_ID, CENTRO_ID, "Centro"))
+                .assertNext(saved -> assertThat(saved.findBranchById(CENTRO_ID).orElseThrow().getName())
+                        .isEqualTo("Centro"))
                 .verifyComplete();
     }
 
     @Test
-    @DisplayName("updateBranchName falla cuando el nuevo nombre ya existe")
+    @DisplayName("updateBranchName falla cuando el nuevo nombre ya existe en otra sucursal")
     void updateBranchNameDuplicate() {
         givenFranchiseExists();
 
-        StepVerifier.create(service.updateBranchName(FRANCHISE_ID, "Centro", "Norte"))
+        StepVerifier.create(service.updateBranchName(FRANCHISE_ID, CENTRO_ID, "Norte"))
                 .verifyError(DuplicateResourceException.class);
     }
 
     @Test
-    @DisplayName("updateBranchName falla cuando la sucursal no existe")
+    @DisplayName("updateBranchName falla cuando el id de sucursal no existe")
     void updateBranchNameNotFound() {
         givenFranchiseExists();
 
-        StepVerifier.create(service.updateBranchName(FRANCHISE_ID, "Sur", "Sur 2"))
+        StepVerifier.create(service.updateBranchName(FRANCHISE_ID, "b-inexistente", "Sur 2"))
                 .verifyError(NotFoundException.class);
     }
 
     @Test
-    @DisplayName("addProduct agrega un producto a la sucursal")
+    @DisplayName("addProduct agrega un producto con id generado a la sucursal")
     void addProduct() {
         givenFranchiseExists();
 
-        StepVerifier.create(service.addProduct(FRANCHISE_ID, "Centro", "Leche", 5))
+        StepVerifier.create(service.addProduct(FRANCHISE_ID, CENTRO_ID, "Leche", 5))
                 .assertNext(saved -> {
-                    Product added = saved.findBranch("Centro").orElseThrow()
-                            .findProduct("Leche").orElseThrow();
+                    Branch branch = saved.findBranchById(CENTRO_ID).orElseThrow();
+                    Product added = branch.getProducts().get(branch.getProducts().size() - 1);
+                    assertThat(added.getName()).isEqualTo("Leche");
                     assertThat(added.getStock()).isEqualTo(5);
+                    assertThat(added.getId()).isNotBlank();
                 })
                 .verifyComplete();
     }
@@ -186,70 +196,67 @@ class FranchiseServiceTest {
     void addProductDuplicate() {
         givenFranchiseExists();
 
-        StepVerifier.create(service.addProduct(FRANCHISE_ID, "Centro", "Café", 5))
+        StepVerifier.create(service.addProduct(FRANCHISE_ID, CENTRO_ID, "Café", 5))
                 .verifyError(DuplicateResourceException.class);
     }
 
     @Test
-    @DisplayName("addProduct falla cuando la sucursal no existe")
+    @DisplayName("addProduct falla cuando el id de sucursal no existe")
     void addProductBranchNotFound() {
         givenFranchiseExists();
 
-        StepVerifier.create(service.addProduct(FRANCHISE_ID, "Sur", "Leche", 5))
+        StepVerifier.create(service.addProduct(FRANCHISE_ID, "b-inexistente", "Leche", 5))
                 .verifyError(NotFoundException.class);
     }
 
     @Test
-    @DisplayName("removeProduct elimina el producto de la sucursal")
+    @DisplayName("removeProduct elimina el producto identificado por id")
     void removeProduct() {
         givenFranchiseExists();
 
-        StepVerifier.create(service.removeProduct(FRANCHISE_ID, "Centro", "Café"))
+        StepVerifier.create(service.removeProduct(FRANCHISE_ID, CENTRO_ID, CAFE_ID))
                 .assertNext(saved -> assertThat(
-                        saved.findBranch("Centro").orElseThrow().hasProduct("Café")).isFalse())
+                        saved.findBranchById(CENTRO_ID).orElseThrow().findProductById(CAFE_ID)).isEmpty())
                 .verifyComplete();
     }
 
     @Test
-    @DisplayName("removeProduct falla cuando el producto no existe")
+    @DisplayName("removeProduct falla cuando el id de producto no existe")
     void removeProductNotFound() {
         givenFranchiseExists();
 
-        StepVerifier.create(service.removeProduct(FRANCHISE_ID, "Centro", "Leche"))
+        StepVerifier.create(service.removeProduct(FRANCHISE_ID, CENTRO_ID, "p-inexistente"))
                 .verifyError(NotFoundException.class);
     }
 
     @Test
-    @DisplayName("updateProductStock modifica el stock del producto")
+    @DisplayName("updateProductStock modifica el stock del producto identificado por id")
     void updateProductStock() {
         givenFranchiseExists();
 
-        StepVerifier.create(service.updateProductStock(FRANCHISE_ID, "Centro", "Café", 42))
-                .assertNext(saved -> assertThat(saved.findBranch("Centro").orElseThrow()
-                        .findProduct("Café").orElseThrow().getStock()).isEqualTo(42))
+        StepVerifier.create(service.updateProductStock(FRANCHISE_ID, CENTRO_ID, CAFE_ID, 42))
+                .assertNext(saved -> assertThat(saved.findBranchById(CENTRO_ID).orElseThrow()
+                        .findProductById(CAFE_ID).orElseThrow().getStock()).isEqualTo(42))
                 .verifyComplete();
     }
 
     @Test
-    @DisplayName("updateProductStock falla cuando el producto no existe")
+    @DisplayName("updateProductStock falla cuando el id de producto no existe")
     void updateProductStockNotFound() {
         givenFranchiseExists();
 
-        StepVerifier.create(service.updateProductStock(FRANCHISE_ID, "Centro", "Leche", 42))
+        StepVerifier.create(service.updateProductStock(FRANCHISE_ID, CENTRO_ID, "p-inexistente", 42))
                 .verifyError(NotFoundException.class);
     }
 
     @Test
-    @DisplayName("updateProductName renombra el producto")
+    @DisplayName("updateProductName renombra el producto identificado por id")
     void updateProductName() {
         givenFranchiseExists();
 
-        StepVerifier.create(service.updateProductName(FRANCHISE_ID, "Centro", "Café", "Café Premium"))
-                .assertNext(saved -> {
-                    Branch branch = saved.findBranch("Centro").orElseThrow();
-                    assertThat(branch.hasProduct("Café Premium")).isTrue();
-                    assertThat(branch.hasProduct("Café")).isFalse();
-                })
+        StepVerifier.create(service.updateProductName(FRANCHISE_ID, CENTRO_ID, CAFE_ID, "Café Premium"))
+                .assertNext(saved -> assertThat(saved.findBranchById(CENTRO_ID).orElseThrow()
+                        .findProductById(CAFE_ID).orElseThrow().getName()).isEqualTo("Café Premium"))
                 .verifyComplete();
     }
 
@@ -258,27 +265,27 @@ class FranchiseServiceTest {
     void updateProductNameSameName() {
         givenFranchiseExists();
 
-        StepVerifier.create(service.updateProductName(FRANCHISE_ID, "Centro", "Café", "Café"))
-                .assertNext(saved -> assertThat(
-                        saved.findBranch("Centro").orElseThrow().hasProduct("Café")).isTrue())
+        StepVerifier.create(service.updateProductName(FRANCHISE_ID, CENTRO_ID, CAFE_ID, "Café"))
+                .assertNext(saved -> assertThat(saved.findBranchById(CENTRO_ID).orElseThrow()
+                        .findProductById(CAFE_ID).orElseThrow().getName()).isEqualTo("Café"))
                 .verifyComplete();
     }
 
     @Test
-    @DisplayName("updateProductName falla cuando el nuevo nombre ya existe en la sucursal")
+    @DisplayName("updateProductName falla cuando el nuevo nombre ya existe en otro producto de la sucursal")
     void updateProductNameDuplicate() {
         givenFranchiseExists();
 
-        StepVerifier.create(service.updateProductName(FRANCHISE_ID, "Centro", "Café", "Pan"))
+        StepVerifier.create(service.updateProductName(FRANCHISE_ID, CENTRO_ID, CAFE_ID, "Pan"))
                 .verifyError(DuplicateResourceException.class);
     }
 
     @Test
-    @DisplayName("updateProductName falla cuando el producto no existe")
+    @DisplayName("updateProductName falla cuando el id de producto no existe")
     void updateProductNameNotFound() {
         givenFranchiseExists();
 
-        StepVerifier.create(service.updateProductName(FRANCHISE_ID, "Centro", "Leche", "Leche 2"))
+        StepVerifier.create(service.updateProductName(FRANCHISE_ID, CENTRO_ID, "p-inexistente", "Leche 2"))
                 .verifyError(NotFoundException.class);
     }
 
@@ -322,17 +329,17 @@ class FranchiseServiceTest {
             Franchise attempted = invocation.getArgument(0);
             if (reads.get() == 1) {
                 // otro proceso agregó una sucursal entre nuestra lectura y nuestra escritura
-                stored.set(franchise.addBranch(Branch.builder().name("Sur").build()));
+                stored.set(franchise.addBranch(Branch.builder().id("b-sur").name("Sur").build()));
                 return Mono.error(concurrencyConflict());
             }
             stored.set(attempted);
             return Mono.just(attempted);
         });
 
-        StepVerifier.create(service.addProduct(FRANCHISE_ID, "Centro", "Leche", 5))
+        StepVerifier.create(service.addProduct(FRANCHISE_ID, CENTRO_ID, "Leche", 5))
                 .assertNext(saved -> {
-                    assertThat(saved.findBranch("Centro").orElseThrow().hasProduct("Leche")).isTrue();
-                    assertThat(saved.hasBranch("Sur")).isTrue();
+                    assertThat(saved.findBranchById(CENTRO_ID).orElseThrow().hasProductNamed("Leche")).isTrue();
+                    assertThat(saved.hasBranchNamed("Sur")).isTrue();
                 })
                 .verifyComplete();
 
@@ -349,7 +356,7 @@ class FranchiseServiceTest {
                 .thenAnswer(invocation -> Mono.just(invocation.getArgument(0)));
 
         StepVerifier.create(service.addBranch(FRANCHISE_ID, "Sur"))
-                .assertNext(saved -> assertThat(saved.hasBranch("Sur")).isTrue())
+                .assertNext(saved -> assertThat(saved.hasBranchNamed("Sur")).isTrue())
                 .verifyComplete();
     }
 
@@ -372,7 +379,7 @@ class FranchiseServiceTest {
         when(repository.findById(FRANCHISE_ID)).thenReturn(Mono.just(franchise));
         when(repository.save(any(Franchise.class))).thenReturn(Mono.error(concurrencyConflict()));
 
-        StepVerifier.create(service.updateProductStock(FRANCHISE_ID, "Centro", "Café", 42))
+        StepVerifier.create(service.updateProductStock(FRANCHISE_ID, CENTRO_ID, CAFE_ID, 42))
                 .verifyError(ConcurrencyConflictException.class);
     }
 
@@ -381,7 +388,7 @@ class FranchiseServiceTest {
     void doesNotRetryBusinessErrors() {
         givenFranchiseExists();
 
-        StepVerifier.create(service.addProduct(FRANCHISE_ID, "Centro", "Café", 5))
+        StepVerifier.create(service.addProduct(FRANCHISE_ID, CENTRO_ID, "Café", 5))
                 .verifyError(DuplicateResourceException.class);
 
         verify(repository, never()).save(any(Franchise.class));

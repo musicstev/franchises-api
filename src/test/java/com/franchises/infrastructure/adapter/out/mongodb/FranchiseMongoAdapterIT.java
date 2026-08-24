@@ -18,6 +18,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import reactor.test.StepVerifier;
 
 import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -57,13 +58,18 @@ class FranchiseMongoAdapterIT {
     }
 
     @Test
-    @DisplayName("guarda y recupera el agregado completo contra un MongoDB real")
+    @DisplayName("guarda y recupera el agregado completo, con ids, contra un MongoDB real")
     void savesAndReloadsTheFullAggregate() {
         Franchise franchise = Franchise.builder()
                 .name("Mi Franquicia")
                 .branches(List.of(Branch.builder()
+                        .id(UUID.randomUUID().toString())
                         .name("Centro")
-                        .products(List.of(Product.builder().name("Café").stock(10).build()))
+                        .products(List.of(Product.builder()
+                                .id(UUID.randomUUID().toString())
+                                .name("Café")
+                                .stock(10)
+                                .build()))
                         .build()))
                 .build();
 
@@ -73,8 +79,11 @@ class FranchiseMongoAdapterIT {
                 .assertNext(reloaded -> {
                     assertThat(reloaded.getName()).isEqualTo("Mi Franquicia");
                     assertThat(reloaded.getVersion()).isNotNull();
-                    assertThat(reloaded.findBranch("Centro").orElseThrow()
-                            .findProduct("Café").orElseThrow().getStock()).isEqualTo(10);
+                    Branch branch = reloaded.getBranches().get(0);
+                    assertThat(branch.getId()).isNotBlank();
+                    Product product = branch.getProducts().get(0);
+                    assertThat(product.getId()).isNotBlank();
+                    assertThat(product.getStock()).isEqualTo(10);
                 })
                 .verifyComplete();
     }

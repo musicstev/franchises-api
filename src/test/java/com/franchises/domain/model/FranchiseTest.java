@@ -10,18 +10,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 class FranchiseTest {
 
     private final Branch centro = Branch.builder()
+            .id("b-1")
             .name("Centro")
             .products(List.of(
-                    Product.builder().name("Café").stock(10).build(),
-                    Product.builder().name("Pan").stock(25).build()))
+                    Product.builder().id("p-1").name("Café").stock(10).build(),
+                    Product.builder().id("p-2").name("Pan").stock(25).build()))
             .build();
 
     private final Branch norte = Branch.builder()
+            .id("b-2")
             .name("Norte")
-            .products(List.of(Product.builder().name("Leche").stock(7).build()))
+            .products(List.of(Product.builder().id("p-3").name("Leche").stock(7).build()))
             .build();
 
-    private final Branch vacia = Branch.builder().name("Vacía").build();
+    private final Branch vacia = Branch.builder().id("b-3").name("Vacía").build();
 
     private final Franchise franchise = Franchise.builder()
             .id("f-1")
@@ -30,23 +32,23 @@ class FranchiseTest {
             .build();
 
     @Test
-    @DisplayName("hasBranch identifica sucursales existentes e inexistentes")
-    void hasBranch() {
-        assertThat(franchise.hasBranch("Centro")).isTrue();
-        assertThat(franchise.hasBranch("Sur")).isFalse();
+    @DisplayName("hasBranchNamed identifica sucursales existentes e inexistentes por nombre")
+    void hasBranchNamed() {
+        assertThat(franchise.hasBranchNamed("Centro")).isTrue();
+        assertThat(franchise.hasBranchNamed("Sur")).isFalse();
     }
 
     @Test
-    @DisplayName("findBranch devuelve la sucursal por nombre")
-    void findBranch() {
-        assertThat(franchise.findBranch("Norte")).contains(norte);
-        assertThat(franchise.findBranch("Sur")).isEmpty();
+    @DisplayName("findBranchById devuelve la sucursal por id")
+    void findBranchById() {
+        assertThat(franchise.findBranchById("b-2")).contains(norte);
+        assertThat(franchise.findBranchById("b-999")).isEmpty();
     }
 
     @Test
     @DisplayName("addBranch devuelve una nueva franquicia con la sucursal agregada")
     void addBranch() {
-        Branch sur = Branch.builder().name("Sur").build();
+        Branch sur = Branch.builder().id("b-4").name("Sur").build();
 
         Franchise updated = franchise.addBranch(sur);
 
@@ -55,15 +57,14 @@ class FranchiseTest {
     }
 
     @Test
-    @DisplayName("replaceBranch sustituye únicamente la sucursal indicada")
-    void replaceBranch() {
+    @DisplayName("replaceBranchById sustituye únicamente la sucursal indicada")
+    void replaceBranchById() {
         Branch renamed = centro.withName("Centro Histórico");
 
-        Franchise updated = franchise.replaceBranch("Centro", renamed);
+        Franchise updated = franchise.replaceBranchById("b-1", renamed);
 
-        assertThat(updated.findBranch("Centro Histórico")).isPresent();
-        assertThat(updated.findBranch("Centro")).isEmpty();
-        assertThat(updated.findBranch("Norte")).contains(norte);
+        assertThat(updated.findBranchById("b-1").orElseThrow().getName()).isEqualTo("Centro Histórico");
+        assertThat(updated.findBranchById("b-2")).contains(norte);
     }
 
     @Test

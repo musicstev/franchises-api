@@ -33,8 +33,9 @@ class FranchiseMongoAdapterTest {
             .id("f-1")
             .name("Mi Franquicia")
             .branches(List.of(Branch.builder()
+                    .id("b-1")
                     .name("Centro")
-                    .products(List.of(Product.builder().name("Café").stock(10).build()))
+                    .products(List.of(Product.builder().id("p-1").name("Café").stock(10).build()))
                     .build()))
             .build();
 

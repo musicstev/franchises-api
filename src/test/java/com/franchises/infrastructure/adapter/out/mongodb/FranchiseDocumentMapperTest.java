@@ -21,10 +21,11 @@ class FranchiseDocumentMapperTest {
                 .name("Mi Franquicia")
                 .branches(List.of(
                         Branch.builder()
+                                .id("b-1")
                                 .name("Centro")
-                                .products(List.of(Product.builder().name("Café").stock(10).build()))
+                                .products(List.of(Product.builder().id("p-1").name("Café").stock(10).build()))
                                 .build(),
-                        Branch.builder().name("Vacía").build()))
+                        Branch.builder().id("b-2").name("Vacía").build()))
                 .build();
 
         Franchise result = FranchiseDocumentMapper.toDomain(FranchiseDocumentMapper.toDocument(franchise));
@@ -53,12 +54,13 @@ class FranchiseDocumentMapperTest {
                 .name("Con Sucursal")
                 .branches(List.of(
                         com.franchises.infrastructure.adapter.out.mongodb.document.BranchDocument.builder()
+                                .id("b-1")
                                 .name("Centro")
                                 .build()))
                 .build();
 
         Franchise result = FranchiseDocumentMapper.toDomain(document);
 
-        assertThat(result.findBranch("Centro").orElseThrow().getProducts()).isEmpty();
+        assertThat(result.findBranchById("b-1").orElseThrow().getProducts()).isEmpty();
     }
 }

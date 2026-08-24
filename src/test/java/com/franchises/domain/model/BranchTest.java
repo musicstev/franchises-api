@@ -10,32 +10,33 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class BranchTest {
 
-    private final Product cafe = Product.builder().name("Café").stock(10).build();
-    private final Product pan = Product.builder().name("Pan").stock(25).build();
+    private final Product cafe = Product.builder().id("p-1").name("Café").stock(10).build();
+    private final Product pan = Product.builder().id("p-2").name("Pan").stock(25).build();
 
     private final Branch branch = Branch.builder()
+            .id("b-1")
             .name("Sucursal Centro")
             .products(List.of(cafe, pan))
             .build();
 
     @Test
-    @DisplayName("hasProduct identifica productos existentes e inexistentes")
-    void hasProduct() {
-        assertThat(branch.hasProduct("Café")).isTrue();
-        assertThat(branch.hasProduct("Leche")).isFalse();
+    @DisplayName("hasProductNamed identifica productos existentes e inexistentes por nombre")
+    void hasProductNamed() {
+        assertThat(branch.hasProductNamed("Café")).isTrue();
+        assertThat(branch.hasProductNamed("Leche")).isFalse();
     }
 
     @Test
-    @DisplayName("findProduct devuelve el producto por nombre")
-    void findProduct() {
-        assertThat(branch.findProduct("Pan")).contains(pan);
-        assertThat(branch.findProduct("Leche")).isEmpty();
+    @DisplayName("findProductById devuelve el producto por id")
+    void findProductById() {
+        assertThat(branch.findProductById("p-2")).contains(pan);
+        assertThat(branch.findProductById("p-999")).isEmpty();
     }
 
     @Test
     @DisplayName("addProduct devuelve una nueva sucursal con el producto agregado")
     void addProduct() {
-        Product leche = Product.builder().name("Leche").stock(5).build();
+        Product leche = Product.builder().id("p-3").name("Leche").stock(5).build();
 
         Branch updated = branch.addProduct(leche);
 
@@ -44,34 +45,43 @@ class BranchTest {
     }
 
     @Test
-    @DisplayName("removeProduct elimina el producto cuando existe")
-    void removeProduct() {
-        Optional<Branch> updated = branch.removeProduct("Café");
+    @DisplayName("removeProductById elimina el producto cuando existe")
+    void removeProductById() {
+        Optional<Branch> updated = branch.removeProductById("p-1");
 
         assertThat(updated).isPresent();
         assertThat(updated.orElseThrow().getProducts()).containsExactly(pan);
     }
 
     @Test
-    @DisplayName("removeProduct devuelve vacío cuando el producto no existe")
-    void removeProductNotFound() {
-        assertThat(branch.removeProduct("Leche")).isEmpty();
+    @DisplayName("removeProductById devuelve vacío cuando el producto no existe")
+    void removeProductByIdNotFound() {
+        assertThat(branch.removeProductById("p-999")).isEmpty();
     }
 
     @Test
-    @DisplayName("updateProduct transforma únicamente el producto indicado")
-    void updateProduct() {
-        Optional<Branch> updated = branch.updateProduct("Café", product -> product.withStock(99));
+    @DisplayName("updateProductById transforma únicamente el producto indicado")
+    void updateProductById() {
+        Optional<Branch> updated = branch.updateProductById("p-1", product -> product.withStock(99));
 
         assertThat(updated).isPresent();
-        assertThat(updated.orElseThrow().findProduct("Café").orElseThrow().getStock()).isEqualTo(99);
-        assertThat(updated.orElseThrow().findProduct("Pan").orElseThrow().getStock()).isEqualTo(25);
+        assertThat(updated.orElseThrow().findProductById("p-1").orElseThrow().getStock()).isEqualTo(99);
+        assertThat(updated.orElseThrow().findProductById("p-2").orElseThrow().getStock()).isEqualTo(25);
     }
 
     @Test
-    @DisplayName("updateProduct devuelve vacío cuando el producto no existe")
-    void updateProductNotFound() {
-        assertThat(branch.updateProduct("Leche", product -> product.withStock(1))).isEmpty();
+    @DisplayName("updateProductById devuelve vacío cuando el producto no existe")
+    void updateProductByIdNotFound() {
+        assertThat(branch.updateProductById("p-999", product -> product.withStock(1))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("replaceProduct sustituye únicamente el producto con el mismo id")
+    void replaceProduct() {
+        Branch updated = branch.replaceProduct(cafe.withName("Café Premium"));
+
+        assertThat(updated.findProductById("p-1").orElseThrow().getName()).isEqualTo("Café Premium");
+        assertThat(updated.findProductById("p-2").orElseThrow().getName()).isEqualTo("Pan");
     }
 
     @Test
@@ -83,7 +93,7 @@ class BranchTest {
     @Test
     @DisplayName("topStockProduct devuelve vacío para una sucursal sin productos")
     void topStockProductEmpty() {
-        Branch empty = Branch.builder().name("Vacía").build();
+        Branch empty = Branch.builder().id("b-2").name("Vacía").build();
 
         assertThat(empty.topStockProduct()).isEmpty();
         assertThat(empty.getProducts()).isEmpty();

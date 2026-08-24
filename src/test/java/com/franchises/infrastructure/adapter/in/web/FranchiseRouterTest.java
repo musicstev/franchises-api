@@ -27,6 +27,10 @@ import static org.mockito.Mockito.when;
 @Import({FranchiseRouter.class, FranchiseHandler.class, RequestValidator.class, GlobalErrorHandler.class})
 class FranchiseRouterTest {
 
+    private static final String FRANCHISE_ID = "f-1";
+    private static final String BRANCH_ID = "b-centro";
+    private static final String PRODUCT_ID = "p-cafe";
+
     @Autowired
     private WebTestClient webTestClient;
 
@@ -34,11 +38,12 @@ class FranchiseRouterTest {
     private FranchiseUseCase franchiseUseCase;
 
     private final Franchise franchise = Franchise.builder()
-            .id("f-1")
+            .id(FRANCHISE_ID)
             .name("Mi Franquicia")
             .branches(List.of(Branch.builder()
+                    .id(BRANCH_ID)
                     .name("Centro")
-                    .products(List.of(Product.builder().name("Café").stock(10).build()))
+                    .products(List.of(Product.builder().id(PRODUCT_ID).name("Café").stock(10).build()))
                     .build()))
             .build();
 
@@ -53,9 +58,11 @@ class FranchiseRouterTest {
                 .exchange()
                 .expectStatus().isCreated()
                 .expectBody()
-                .jsonPath("$.id").isEqualTo("f-1")
+                .jsonPath("$.id").isEqualTo(FRANCHISE_ID)
                 .jsonPath("$.name").isEqualTo("Mi Franquicia")
+                .jsonPath("$.branches[0].id").isEqualTo(BRANCH_ID)
                 .jsonPath("$.branches[0].name").isEqualTo("Centro")
+                .jsonPath("$.branches[0].products[0].id").isEqualTo(PRODUCT_ID)
                 .jsonPath("$.branches[0].products[0].stock").isEqualTo(10);
     }
 
@@ -82,10 +89,10 @@ class FranchiseRouterTest {
     @Test
     @DisplayName("PATCH /api/franchises/{id}/name actualiza el nombre de la franquicia")
     void updateFranchiseName() {
-        when(franchiseUseCase.updateFranchiseName("f-1", "Nueva Marca"))
+        when(franchiseUseCase.updateFranchiseName(FRANCHISE_ID, "Nueva Marca"))
                 .thenReturn(Mono.just(franchise.withName("Nueva Marca")));
 
-        webTestClient.patch().uri("/api/franchises/f-1/name")
+        webTestClient.patch().uri("/api/franchises/{id}/name", FRANCHISE_ID)
                 .header("Content-Type", "application/json")
                 .bodyValue("{\"name\":\"Nueva Marca\"}")
                 .exchange()
@@ -113,9 +120,9 @@ class FranchiseRouterTest {
     @Test
     @DisplayName("POST /api/franchises/{id}/branches agrega una sucursal y responde 201")
     void addBranch() {
-        when(franchiseUseCase.addBranch("f-1", "Norte")).thenReturn(Mono.just(franchise));
+        when(franchiseUseCase.addBranch(FRANCHISE_ID, "Norte")).thenReturn(Mono.just(franchise));
 
-        webTestClient.post().uri("/api/franchises/f-1/branches")
+        webTestClient.post().uri("/api/franchises/{id}/branches", FRANCHISE_ID)
                 .header("Content-Type", "application/json")
                 .bodyValue("{\"name\":\"Norte\"}")
                 .exchange()
@@ -128,7 +135,7 @@ class FranchiseRouterTest {
         when(franchiseUseCase.addBranch(anyString(), anyString()))
                 .thenReturn(Mono.error(new DuplicateResourceException("Ya existe una sucursal con el nombre: Centro")));
 
-        webTestClient.post().uri("/api/franchises/f-1/branches")
+        webTestClient.post().uri("/api/franchises/{id}/branches", FRANCHISE_ID)
                 .header("Content-Type", "application/json")
                 .bodyValue("{\"name\":\"Centro\"}")
                 .exchange()
@@ -138,12 +145,12 @@ class FranchiseRouterTest {
     }
 
     @Test
-    @DisplayName("PATCH /api/franchises/{id}/branches/{branch}/name renombra la sucursal")
+    @DisplayName("PATCH /api/franchises/{id}/branches/{branchId}/name renombra la sucursal")
     void updateBranchName() {
-        when(franchiseUseCase.updateBranchName("f-1", "Centro", "Centro Histórico"))
+        when(franchiseUseCase.updateBranchName(FRANCHISE_ID, BRANCH_ID, "Centro Histórico"))
                 .thenReturn(Mono.just(franchise));
 
-        webTestClient.patch().uri("/api/franchises/f-1/branches/Centro/name")
+        webTestClient.patch().uri("/api/franchises/{id}/branches/{branchId}/name", FRANCHISE_ID, BRANCH_ID)
                 .header("Content-Type", "application/json")
                 .bodyValue("{\"name\":\"Centro Histórico\"}")
                 .exchange()
@@ -151,11 +158,11 @@ class FranchiseRouterTest {
     }
 
     @Test
-    @DisplayName("POST .../products agrega un producto y responde 201")
+    @DisplayName("POST .../branches/{branchId}/products agrega un producto y responde 201")
     void addProduct() {
-        when(franchiseUseCase.addProduct("f-1", "Centro", "Leche", 5)).thenReturn(Mono.just(franchise));
+        when(franchiseUseCase.addProduct(FRANCHISE_ID, BRANCH_ID, "Leche", 5)).thenReturn(Mono.just(franchise));
 
-        webTestClient.post().uri("/api/franchises/f-1/branches/Centro/products")
+        webTestClient.post().uri("/api/franchises/{id}/branches/{branchId}/products", FRANCHISE_ID, BRANCH_ID)
                 .header("Content-Type", "application/json")
                 .bodyValue("{\"name\":\"Leche\",\"stock\":5}")
                 .exchange()
@@ -165,7 +172,7 @@ class FranchiseRouterTest {
     @Test
     @DisplayName("POST .../products responde 400 con stock negativo")
     void addProductNegativeStock() {
-        webTestClient.post().uri("/api/franchises/f-1/branches/Centro/products")
+        webTestClient.post().uri("/api/franchises/{id}/branches/{branchId}/products", FRANCHISE_ID, BRANCH_ID)
                 .header("Content-Type", "application/json")
                 .bodyValue("{\"name\":\"Leche\",\"stock\":-1}")
                 .exchange()
@@ -175,22 +182,26 @@ class FranchiseRouterTest {
     }
 
     @Test
-    @DisplayName("DELETE .../products/{product} elimina el producto")
+    @DisplayName("DELETE .../products/{productId} elimina el producto")
     void removeProduct() {
-        when(franchiseUseCase.removeProduct("f-1", "Centro", "Café")).thenReturn(Mono.just(franchise));
+        when(franchiseUseCase.removeProduct(FRANCHISE_ID, BRANCH_ID, PRODUCT_ID)).thenReturn(Mono.just(franchise));
 
-        webTestClient.delete().uri("/api/franchises/f-1/branches/Centro/products/Café")
+        webTestClient.delete()
+                .uri("/api/franchises/{id}/branches/{branchId}/products/{productId}",
+                        FRANCHISE_ID, BRANCH_ID, PRODUCT_ID)
                 .exchange()
                 .expectStatus().isOk();
     }
 
     @Test
-    @DisplayName("PATCH .../products/{product}/stock modifica el stock")
+    @DisplayName("PATCH .../products/{productId}/stock modifica el stock")
     void updateProductStock() {
-        when(franchiseUseCase.updateProductStock("f-1", "Centro", "Café", 42))
+        when(franchiseUseCase.updateProductStock(FRANCHISE_ID, BRANCH_ID, PRODUCT_ID, 42))
                 .thenReturn(Mono.just(franchise));
 
-        webTestClient.patch().uri("/api/franchises/f-1/branches/Centro/products/Café/stock")
+        webTestClient.patch()
+                .uri("/api/franchises/{id}/branches/{branchId}/products/{productId}/stock",
+                        FRANCHISE_ID, BRANCH_ID, PRODUCT_ID)
                 .header("Content-Type", "application/json")
                 .bodyValue("{\"stock\":42}")
                 .exchange()
@@ -198,9 +209,11 @@ class FranchiseRouterTest {
     }
 
     @Test
-    @DisplayName("PATCH .../products/{product}/stock responde 400 sin stock")
+    @DisplayName("PATCH .../products/{productId}/stock responde 400 sin stock")
     void updateProductStockMissing() {
-        webTestClient.patch().uri("/api/franchises/f-1/branches/Centro/products/Café/stock")
+        webTestClient.patch()
+                .uri("/api/franchises/{id}/branches/{branchId}/products/{productId}/stock",
+                        FRANCHISE_ID, BRANCH_ID, PRODUCT_ID)
                 .header("Content-Type", "application/json")
                 .bodyValue("{}")
                 .exchange()
@@ -210,12 +223,14 @@ class FranchiseRouterTest {
     }
 
     @Test
-    @DisplayName("PATCH .../products/{product}/name renombra el producto")
+    @DisplayName("PATCH .../products/{productId}/name renombra el producto")
     void updateProductName() {
-        when(franchiseUseCase.updateProductName("f-1", "Centro", "Café", "Café Premium"))
+        when(franchiseUseCase.updateProductName(FRANCHISE_ID, BRANCH_ID, PRODUCT_ID, "Café Premium"))
                 .thenReturn(Mono.just(franchise));
 
-        webTestClient.patch().uri("/api/franchises/f-1/branches/Centro/products/Café/name")
+        webTestClient.patch()
+                .uri("/api/franchises/{id}/branches/{branchId}/products/{productId}/name",
+                        FRANCHISE_ID, BRANCH_ID, PRODUCT_ID)
                 .header("Content-Type", "application/json")
                 .bodyValue("{\"name\":\"Café Premium\"}")
                 .exchange()
@@ -225,11 +240,11 @@ class FranchiseRouterTest {
     @Test
     @DisplayName("GET /api/franchises/{id}/top-stock-products lista el producto de mayor stock por sucursal")
     void topStockProducts() {
-        when(franchiseUseCase.topStockProducts("f-1")).thenReturn(Flux.just(
+        when(franchiseUseCase.topStockProducts(FRANCHISE_ID)).thenReturn(Flux.just(
                 new TopStockProduct("Centro", "Pan", 25),
                 new TopStockProduct("Norte", "Leche", 7)));
 
-        webTestClient.get().uri("/api/franchises/f-1/top-stock-products")
+        webTestClient.get().uri("/api/franchises/{id}/top-stock-products", FRANCHISE_ID)
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -242,7 +257,9 @@ class FranchiseRouterTest {
     @Test
     @DisplayName("stock update con valor negativo responde 400")
     void updateProductStockNegative() {
-        webTestClient.patch().uri("/api/franchises/f-1/branches/Centro/products/Café/stock")
+        webTestClient.patch()
+                .uri("/api/franchises/{id}/branches/{branchId}/products/{productId}/stock",
+                        FRANCHISE_ID, BRANCH_ID, PRODUCT_ID)
                 .header("Content-Type", "application/json")
                 .bodyValue("{\"stock\":-10}")
                 .exchange()
@@ -250,12 +267,14 @@ class FranchiseRouterTest {
     }
 
     @Test
-    @DisplayName("PATCH .../products/{product}/stock acepta stock 0")
+    @DisplayName("PATCH .../products/{productId}/stock acepta stock 0")
     void updateProductStockZero() {
         when(franchiseUseCase.updateProductStock(anyString(), anyString(), anyString(), anyInt()))
                 .thenReturn(Mono.just(franchise));
 
-        webTestClient.patch().uri("/api/franchises/f-1/branches/Centro/products/Café/stock")
+        webTestClient.patch()
+                .uri("/api/franchises/{id}/branches/{branchId}/products/{productId}/stock",
+                        FRANCHISE_ID, BRANCH_ID, PRODUCT_ID)
                 .header("Content-Type", "application/json")
                 .bodyValue("{\"stock\":0}")
                 .exchange()
