@@ -38,9 +38,11 @@ public class FranchiseDocumentMapper {
 
     private BranchDocument toDocument(Branch branch) {
         return BranchDocument.builder()
+                .id(branch.getId())
                 .name(branch.getName())
                 .products(branch.getProducts().stream()
                         .map(product -> ProductDocument.builder()
+                                .id(product.getId())
                                 .name(product.getName())
                                 .stock(product.getStock())
                                 .build())
@@ -50,9 +52,11 @@ public class FranchiseDocumentMapper {
 
     private Branch toDomain(BranchDocument document) {
         return Branch.builder()
+                .id(document.getId())
                 .name(document.getName())
                 .products(Optional.ofNullable(document.getProducts()).orElse(List.of()).stream()
                         .map(product -> Product.builder()
+                                .id(product.getId())
                                 .name(product.getName())
                                 .stock(product.getStock())
                                 .build())

@@ -31,6 +31,7 @@ public class FranchiseDtoMapper {
 
     private BranchResponse toResponse(Branch branch) {
         return new BranchResponse(
+                branch.getId(),
                 branch.getName(),
                 branch.getProducts().stream()
                         .map(FranchiseDtoMapper::toResponse)
@@ -38,6 +39,6 @@ public class FranchiseDtoMapper {
     }
 
     private ProductResponse toResponse(Product product) {
-        return new ProductResponse(product.getName(), product.getStock());
+        return new ProductResponse(product.getId(), product.getName(), product.getStock());
     }
 }

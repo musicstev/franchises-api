@@ -13,6 +13,7 @@ import java.util.List;
 @AllArgsConstructor
 public class BranchDocument {
 
+    private String id;
     private String name;
     private List<ProductDocument> products;
 }

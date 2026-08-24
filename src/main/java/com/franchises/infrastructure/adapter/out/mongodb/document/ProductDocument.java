@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ProductDocument {
 
+    private String id;
     private String name;
     private int stock;
 }
