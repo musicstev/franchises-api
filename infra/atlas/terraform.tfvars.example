@@ -1,0 +1,7 @@
+# Copia a terraform.tfvars (gitignored) y completa con tus credenciales.
+# Alternativa sin archivo: export TF_VAR_atlas_public_key=... etc.
+
+atlas_public_key  = "xxxxxxxx"
+atlas_private_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+atlas_org_id      = "0123456789abcdef01234567"
+db_password       = "cámbiala-por-una-segura"

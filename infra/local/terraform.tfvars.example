@@ -1,0 +1,8 @@
+# Copia este archivo a terraform.tfvars y ajusta lo que necesites.
+# terraform.tfvars está en .gitignore: nunca se versiona.
+
+# Descomenta si docker-compose ya tiene tomado el 27017:
+# mongo_port = 27018
+
+# Descomenta si usas Colima o Rancher Desktop en lugar de Docker Desktop:
+# docker_host = "unix:///Users/stevgomez/.colima/default/docker.sock"
