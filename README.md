@@ -1,0 +1,195 @@
+# Franchises API
+
+API reactiva para la gestión de franquicias, sus sucursales y los productos ofertados en cada sucursal.
+
+**Autor:** William Gomez
+
+## Stack tecnológico
+
+- **Java 21** + **Spring Boot 3.5** (WebFlux — programación reactiva con Project Reactor)
+- **MongoDB** (driver reactivo de Spring Data)
+- **Lombok** (modelos inmutables con `@Value`, `@Builder`, `@With`)
+- **Arquitectura hexagonal** (puertos y adaptadores)
+- **JaCoCo** con verificación de cobertura mínima del **95%**
+- **Docker** y **Docker Compose** para el empaquetado y despliegue local
+
+## Arquitectura
+
+```
+src/main/java/com/franchises
+├── domain                      # Núcleo del dominio (sin dependencias de frameworks)
+│   ├── model                   # Franchise, Branch, Product, TopStockProduct (inmutables)
+│   └── exception               # Excepciones de negocio
+├── application
+│   ├── port
+│   │   ├── in                  # FranchiseUseCase (puerto de entrada)
+│   │   └── out                 # FranchiseRepository (puerto de salida)
+│   └── service                 # FranchiseService (casos de uso reactivos)
+└── infrastructure
+    └── adapter
+        ├── in/web              # Router funcional, handler, DTOs, validación, errores
+        └── out/mongodb         # Adaptador de persistencia + documentos + mapper
+```
+
+- El **dominio** es puro: modelos inmutables cuya lógica de negocio (agregar/renombrar/eliminar, producto con mayor stock) se expresa con funciones que devuelven nuevas instancias (`Stream`, `Optional`, `UnaryOperator`).
+- La **aplicación** orquesta los casos de uso de forma reactiva (`Mono`/`Flux`) y solo conoce los puertos.
+- La **infraestructura** contiene los adaptadores: endpoints funcionales de WebFlux (`RouterFunction`) y persistencia en MongoDB.
+
+## Requisitos previos
+
+Para ejecutar con Docker (recomendado) solo necesitas:
+
+- [Docker](https://docs.docker.com/get-docker/) con Docker Compose
+
+Para ejecutar en local sin Docker:
+
+- Java 21 (JDK)
+- Maven 3.9+
+- Una instancia de MongoDB accesible (por defecto `mongodb://localhost:27017/franchises`)
+
+## Despliegue local
+
+### Opción 1 — Docker Compose (recomendada)
+
+Levanta MongoDB y el API (construyendo la imagen del proyecto) con un solo comando:
+
+```bash
+docker compose up --build
+```
+
+El API queda disponible en `http://localhost:8080` y MongoDB en `localhost:27017`.
+
+Para detener y limpiar:
+
+```bash
+docker compose down
+```
+
+(agrega `-v` si además quieres borrar los datos de MongoDB).
+
+> **Nota:** si tu instalación de Docker no incluye el plugin de Compose (p. ej. Colima), instálalo con `brew install docker-compose` o usa la alternativa manual:
+>
+> ```bash
+> docker build -t franchises-api .
+> docker network create franchises-net
+> docker run -d --name mongo --network franchises-net -p 27017:27017 mongo:7
+> docker run -d --name api --network franchises-net -p 8080:8080 -e MONGO_URI=mongodb://mongo:27017/franchises franchises-api
+> ```
+
+### Opción 2 — Maven en local
+
+1. Levanta MongoDB (por ejemplo con Docker):
+
+   ```bash
+   docker run -d --name mongo -p 27017:27017 mongo:7
+   ```
+
+2. Ejecuta la aplicación:
+
+   ```bash
+   mvn spring-boot:run
+   ```
+
+La URI de conexión puede sobrescribirse con la variable de entorno `MONGO_URI` y el puerto con `SERVER_PORT`.
+
+## Pruebas y cobertura
+
+```bash
+mvn verify
+```
+
+Ejecuta las pruebas unitarias y genera el reporte de cobertura de JaCoCo en
+`target/site/jacoco/index.html`. La build **falla** si la cobertura de instrucciones es inferior al **95%**.
+
+Si no tienes Maven/Java instalados, puedes ejecutar las pruebas dentro de Docker:
+
+```bash
+docker run --rm -v "$PWD":/workspace -w /workspace maven:3.9.9-eclipse-temurin-21 mvn verify
+```
+
+## Documentación API (Swagger)
+
+Con el API corriendo, la documentación interactiva (OpenAPI 3) está disponible en:
+
+- **Swagger UI**: http://localhost:8080/swagger-ui.html
+- **Especificación OpenAPI (JSON)**: http://localhost:8080/v3/api-docs
+
+Desde Swagger UI puedes explorar cada endpoint (parámetros, esquemas de request/response, códigos de error) y ejecutar peticiones de prueba directamente contra el API en ejecución.
+
+## Endpoints
+
+Base: `http://localhost:8080/api/franchises`
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `POST` | `/api/franchises` | Crear una franquicia |
+| `PATCH` | `/api/franchises/{franchiseId}/name` | Actualizar el nombre de una franquicia |
+| `POST` | `/api/franchises/{franchiseId}/branches` | Agregar una sucursal a la franquicia |
+| `PATCH` | `/api/franchises/{franchiseId}/branches/{branchName}/name` | Actualizar el nombre de una sucursal |
+| `POST` | `/api/franchises/{franchiseId}/branches/{branchName}/products` | Agregar un producto a la sucursal |
+| `DELETE` | `/api/franchises/{franchiseId}/branches/{branchName}/products/{productName}` | Eliminar un producto de la sucursal |
+| `PATCH` | `/api/franchises/{franchiseId}/branches/{branchName}/products/{productName}/stock` | Modificar el stock de un producto |
+| `PATCH` | `/api/franchises/{franchiseId}/branches/{branchName}/products/{productName}/name` | Actualizar el nombre de un producto |
+| `GET` | `/api/franchises/{franchiseId}/top-stock-products` | Producto con más stock por sucursal de la franquicia |
+
+Las sucursales y productos se identifican por su nombre dentro de la franquicia (codifícalo en la URL si contiene espacios, p. ej. `Sucursal%20Centro`).
+
+### Ejemplos con `curl`
+
+Crear una franquicia (la respuesta incluye el `id` generado, úsalo en el resto de peticiones):
+
+```bash
+curl -s -X POST http://localhost:8080/api/franchises -H 'Content-Type: application/json' -d '{"name":"Mi Franquicia"}'
+```
+
+Agregar una sucursal:
+
+```bash
+curl -s -X POST http://localhost:8080/api/franchises/{franchiseId}/branches -H 'Content-Type: application/json' -d '{"name":"Sucursal Centro"}'
+```
+
+Agregar un producto:
+
+```bash
+curl -s -X POST http://localhost:8080/api/franchises/{franchiseId}/branches/Sucursal%20Centro/products -H 'Content-Type: application/json' -d '{"name":"Café","stock":25}'
+```
+
+Modificar el stock:
+
+```bash
+curl -s -X PATCH http://localhost:8080/api/franchises/{franchiseId}/branches/Sucursal%20Centro/products/Café/stock -H 'Content-Type: application/json' -d '{"stock":40}'
+```
+
+Eliminar un producto:
+
+```bash
+curl -s -X DELETE http://localhost:8080/api/franchises/{franchiseId}/branches/Sucursal%20Centro/products/Café
+```
+
+Producto con más stock por sucursal:
+
+```bash
+curl -s http://localhost:8080/api/franchises/{franchiseId}/top-stock-products
+```
+
+Renombrar franquicia / sucursal / producto:
+
+```bash
+curl -s -X PATCH http://localhost:8080/api/franchises/{franchiseId}/name -H 'Content-Type: application/json' -d '{"name":"Nueva Marca"}'
+```
+
+```bash
+curl -s -X PATCH http://localhost:8080/api/franchises/{franchiseId}/branches/Sucursal%20Centro/name -H 'Content-Type: application/json' -d '{"name":"Centro Histórico"}'
+```
+
+```bash
+curl -s -X PATCH http://localhost:8080/api/franchises/{franchiseId}/branches/Sucursal%20Centro/products/Café/name -H 'Content-Type: application/json' -d '{"name":"Café Premium"}'
+```
+
+## Manejo de errores
+
+| Situación | Código | Cuerpo |
+|-----------|--------|--------|
+| Franquicia / sucursal / producto no encontrado | `404` | `{"status":404,"error":"Not Found","message":"..."}` |
+| Nombre duplicado (sucursal o producto) | `409` | `{"status":409,"error":"Conflict","message":"..."}` |
+| Cuerpo inválido (nombre en blanco, stock negativo, sin cuerpo) | `400` | `{"status":400,"error":"Bad Request","message":"..."}` |

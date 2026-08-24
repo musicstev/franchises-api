@@ -1,0 +1,215 @@
+{
+  "info": {
+    "_postman_id": "e2b6c9a0-6f2a-4b7e-9c0d-franchises-api",
+    "name": "Franchises API",
+    "description": "API reactiva para la gestión de franquicias, sus sucursales y los productos ofertados en cada sucursal.\n\nBase: {{baseUrl}}/api/franchises",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "franchiseId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "branchName",
+      "value": "Sucursal Chapinero",
+      "type": "string"
+    },
+    {
+      "key": "productName",
+      "value": "Café Americano",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Crear franquicia",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code === 201 || pm.response.code === 200) {",
+              "    const body = pm.response.json();",
+              "    if (body.id) {",
+              "        pm.collectionVariables.set('franchiseId', body.id);",
+              "    }",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Café Aroma\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/franchises",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "franchises"]
+        },
+        "description": "Crea una franquicia. Guarda automáticamente el `id` generado en la variable de colección `franchiseId`."
+      },
+      "response": []
+    },
+    {
+      "name": "Actualizar nombre de franquicia",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Café Aroma Premium\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/franchises/{{franchiseId}}/name",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "franchises", "{{franchiseId}}", "name"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Agregar sucursal",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{branchName}}\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/franchises/{{franchiseId}}/branches",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "franchises", "{{franchiseId}}", "branches"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Actualizar nombre de sucursal",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Sucursal Usaquén\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/franchises/{{franchiseId}}/branches/{{branchName}}/name",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "franchises", "{{franchiseId}}", "branches", "{{branchName}}", "name"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Agregar producto",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{productName}}\",\n  \"stock\": 50\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/franchises/{{franchiseId}}/branches/{{branchName}}/products",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "franchises", "{{franchiseId}}", "branches", "{{branchName}}", "products"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Modificar stock de producto",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"stock\": 65\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/franchises/{{franchiseId}}/branches/{{branchName}}/products/{{productName}}/stock",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "franchises", "{{franchiseId}}", "branches", "{{branchName}}", "products", "{{productName}}", "stock"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Actualizar nombre de producto",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Café Americano Grande\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/franchises/{{franchiseId}}/branches/{{branchName}}/products/{{productName}}/name",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "franchises", "{{franchiseId}}", "branches", "{{branchName}}", "products", "{{productName}}", "name"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Eliminar producto",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/franchises/{{franchiseId}}/branches/{{branchName}}/products/{{productName}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "franchises", "{{franchiseId}}", "branches", "{{branchName}}", "products", "{{productName}}"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Producto con más stock por sucursal",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/franchises/{{franchiseId}}/top-stock-products",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "franchises", "{{franchiseId}}", "top-stock-products"]
+        }
+      },
+      "response": []
+    }
+  ]
+}
