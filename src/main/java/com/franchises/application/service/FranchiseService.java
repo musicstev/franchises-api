@@ -2,6 +2,7 @@ package com.franchises.application.service;
 
 import com.franchises.application.port.in.FranchiseUseCase;
 import com.franchises.application.port.out.FranchiseRepository;
+import com.franchises.domain.exception.ConcurrencyConflictException;
 import com.franchises.domain.exception.DuplicateResourceException;
 import com.franchises.domain.exception.NotFoundException;
 import com.franchises.domain.model.Branch;
@@ -12,12 +13,23 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
 
+import java.time.Duration;
 import java.util.function.BiFunction;
 
 @Service
 @RequiredArgsConstructor
 public class FranchiseService implements FranchiseUseCase {
+
+    /**
+     * Ante una modificación concurrente se reintenta la operación completa: al
+     * resuscribirse, la franquicia se relee con el estado y la versión más recientes y
+     * la regla de negocio se reaplica sobre ese estado fresco.
+     */
+    private static final Retry CONCURRENCY_RETRY = Retry.backoff(3, Duration.ofMillis(50))
+            .filter(ConcurrencyConflictException.class::isInstance)
+            .onRetryExhaustedThrow((spec, signal) -> signal.failure());
 
     private final FranchiseRepository repository;
 
@@ -30,7 +42,8 @@ public class FranchiseService implements FranchiseUseCase {
     public Mono<Franchise> updateFranchiseName(String franchiseId, String newName) {
         return findFranchise(franchiseId)
                 .map(franchise -> franchise.withName(newName))
-                .flatMap(repository::save);
+                .flatMap(repository::save)
+                .retryWhen(CONCURRENCY_RETRY);
     }
 
     @Override
@@ -38,7 +51,8 @@ public class FranchiseService implements FranchiseUseCase {
         return findFranchise(franchiseId)
                 .flatMap(franchise -> franchise.hasBranch(branchName)
                         ? Mono.error(duplicateBranch(branchName))
-                        : repository.save(franchise.addBranch(Branch.builder().name(branchName).build())));
+                        : repository.save(franchise.addBranch(Branch.builder().name(branchName).build())))
+                .retryWhen(CONCURRENCY_RETRY);
     }
 
     @Override
@@ -104,7 +118,8 @@ public class FranchiseService implements FranchiseUseCase {
                         .map(branch -> operation.apply(franchise, branch)
                                 .map(updated -> franchise.replaceBranch(branchName, updated))
                                 .flatMap(repository::save))
-                        .orElseGet(() -> Mono.error(branchNotFound(branchName))));
+                        .orElseGet(() -> Mono.error(branchNotFound(branchName))))
+                .retryWhen(CONCURRENCY_RETRY);
     }
 
     private NotFoundException branchNotFound(String branchName) {

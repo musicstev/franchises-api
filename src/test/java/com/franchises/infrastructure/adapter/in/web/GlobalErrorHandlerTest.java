@@ -2,6 +2,7 @@ package com.franchises.infrastructure.adapter.in.web;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.franchises.domain.exception.ConcurrencyConflictException;
 import com.franchises.domain.exception.DuplicateResourceException;
 import com.franchises.domain.exception.NotFoundException;
 import org.junit.jupiter.api.DisplayName;
@@ -43,6 +44,17 @@ class GlobalErrorHandlerTest {
         MockServerWebExchange exchange = handle(handler, new DuplicateResourceException("duplicado"));
 
         assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    @DisplayName("ConcurrencyConflictException se traduce a 409")
+    void concurrencyConflict() {
+        MockServerWebExchange exchange = handle(handler,
+                new ConcurrencyConflictException("modificada concurrentemente", new RuntimeException()));
+
+        assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(exchange.getResponse().getBodyAsString().block())
+                .contains("modificada concurrentemente");
     }
 
     @Test

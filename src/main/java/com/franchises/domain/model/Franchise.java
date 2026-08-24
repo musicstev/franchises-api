@@ -18,6 +18,13 @@ public class Franchise {
 
     String id;
 
+    /**
+     * Token de concurrencia del agregado. Es {@code null} mientras la franquicia no se
+     * haya persistido y se propaga sin cambios a través de cada mutación, de modo que
+     * la escritura pueda detectar modificaciones concurrentes.
+     */
+    Long version;
+
     @With
     String name;
 

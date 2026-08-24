@@ -1,6 +1,7 @@
 package com.franchises.application.service;
 
 import com.franchises.application.port.out.FranchiseRepository;
+import com.franchises.domain.exception.ConcurrencyConflictException;
 import com.franchises.domain.exception.DuplicateResourceException;
 import com.franchises.domain.exception.NotFoundException;
 import com.franchises.domain.model.Branch;
@@ -17,10 +18,15 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -293,5 +299,91 @@ class FranchiseServiceTest {
 
         StepVerifier.create(service.topStockProducts(FRANCHISE_ID))
                 .verifyError(NotFoundException.class);
+    }
+
+    private ConcurrencyConflictException concurrencyConflict() {
+        return new ConcurrencyConflictException("modificada concurrentemente", new RuntimeException());
+    }
+
+    @Test
+    @DisplayName("ante un conflicto de concurrencia se relee el agregado y no se pierde el cambio ajeno")
+    void retriesOnConcurrencyConflict() {
+        // 'stored' simula el documento en MongoDB; el Mono.defer lo relee en cada suscripción,
+        // igual que un repositorio reactivo real (publisher frío).
+        AtomicReference<Franchise> stored = new AtomicReference<>(franchise);
+        AtomicInteger reads = new AtomicInteger();
+
+        when(repository.findById(FRANCHISE_ID)).thenReturn(Mono.defer(() -> {
+            reads.incrementAndGet();
+            return Mono.just(stored.get());
+        }));
+
+        when(repository.save(any(Franchise.class))).thenAnswer(invocation -> {
+            Franchise attempted = invocation.getArgument(0);
+            if (reads.get() == 1) {
+                // otro proceso agregó una sucursal entre nuestra lectura y nuestra escritura
+                stored.set(franchise.addBranch(Branch.builder().name("Sur").build()));
+                return Mono.error(concurrencyConflict());
+            }
+            stored.set(attempted);
+            return Mono.just(attempted);
+        });
+
+        StepVerifier.create(service.addProduct(FRANCHISE_ID, "Centro", "Leche", 5))
+                .assertNext(saved -> {
+                    assertThat(saved.findBranch("Centro").orElseThrow().hasProduct("Leche")).isTrue();
+                    assertThat(saved.hasBranch("Sur")).isTrue();
+                })
+                .verifyComplete();
+
+        assertThat(reads.get()).isEqualTo(2);
+        verify(repository, times(2)).save(any(Franchise.class));
+    }
+
+    @Test
+    @DisplayName("addBranch también reintenta ante un conflicto de concurrencia")
+    void addBranchRetriesOnConcurrencyConflict() {
+        when(repository.findById(FRANCHISE_ID)).thenReturn(Mono.just(franchise));
+        when(repository.save(any(Franchise.class)))
+                .thenReturn(Mono.error(concurrencyConflict()))
+                .thenAnswer(invocation -> Mono.just(invocation.getArgument(0)));
+
+        StepVerifier.create(service.addBranch(FRANCHISE_ID, "Sur"))
+                .assertNext(saved -> assertThat(saved.hasBranch("Sur")).isTrue())
+                .verifyComplete();
+    }
+
+    @Test
+    @DisplayName("updateFranchiseName también reintenta ante un conflicto de concurrencia")
+    void updateFranchiseNameRetriesOnConcurrencyConflict() {
+        when(repository.findById(FRANCHISE_ID)).thenReturn(Mono.just(franchise));
+        when(repository.save(any(Franchise.class)))
+                .thenReturn(Mono.error(concurrencyConflict()))
+                .thenAnswer(invocation -> Mono.just(invocation.getArgument(0)));
+
+        StepVerifier.create(service.updateFranchiseName(FRANCHISE_ID, "Nueva Marca"))
+                .assertNext(saved -> assertThat(saved.getName()).isEqualTo("Nueva Marca"))
+                .verifyComplete();
+    }
+
+    @Test
+    @DisplayName("si el conflicto persiste se propaga la excepción original, no RetryExhaustedException")
+    void propagatesOriginalErrorWhenRetriesExhausted() {
+        when(repository.findById(FRANCHISE_ID)).thenReturn(Mono.just(franchise));
+        when(repository.save(any(Franchise.class))).thenReturn(Mono.error(concurrencyConflict()));
+
+        StepVerifier.create(service.updateProductStock(FRANCHISE_ID, "Centro", "Café", 42))
+                .verifyError(ConcurrencyConflictException.class);
+    }
+
+    @Test
+    @DisplayName("un error de negocio no se reintenta")
+    void doesNotRetryBusinessErrors() {
+        givenFranchiseExists();
+
+        StepVerifier.create(service.addProduct(FRANCHISE_ID, "Centro", "Café", 5))
+                .verifyError(DuplicateResourceException.class);
+
+        verify(repository, never()).save(any(Franchise.class));
     }
 }

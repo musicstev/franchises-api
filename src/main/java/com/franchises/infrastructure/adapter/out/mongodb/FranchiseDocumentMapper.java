@@ -17,6 +17,7 @@ public class FranchiseDocumentMapper {
     public FranchiseDocument toDocument(Franchise franchise) {
         return FranchiseDocument.builder()
                 .id(franchise.getId())
+                .version(franchise.getVersion())
                 .name(franchise.getName())
                 .branches(franchise.getBranches().stream()
                         .map(FranchiseDocumentMapper::toDocument)
@@ -27,6 +28,7 @@ public class FranchiseDocumentMapper {
     public Franchise toDomain(FranchiseDocument document) {
         return Franchise.builder()
                 .id(document.getId())
+                .version(document.getVersion())
                 .name(document.getName())
                 .branches(Optional.ofNullable(document.getBranches()).orElse(List.of()).stream()
                         .map(FranchiseDocumentMapper::toDomain)

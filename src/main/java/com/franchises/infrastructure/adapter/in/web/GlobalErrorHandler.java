@@ -2,6 +2,7 @@ package com.franchises.infrastructure.adapter.in.web;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.franchises.domain.exception.ConcurrencyConflictException;
 import com.franchises.domain.exception.DuplicateResourceException;
 import com.franchises.domain.exception.NotFoundException;
 import com.franchises.infrastructure.adapter.in.web.dto.ErrorResponse;
@@ -43,7 +44,7 @@ public class GlobalErrorHandler implements ErrorWebExceptionHandler {
         if (ex instanceof NotFoundException) {
             return HttpStatus.NOT_FOUND;
         }
-        if (ex instanceof DuplicateResourceException) {
+        if (ex instanceof DuplicateResourceException || ex instanceof ConcurrencyConflictException) {
             return HttpStatus.CONFLICT;
         }
         if (ex instanceof IllegalArgumentException) {
