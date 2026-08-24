@@ -27,6 +27,13 @@ class BranchTest {
     }
 
     @Test
+    @DisplayName("hasProductNamed ignora mayúsculas y minúsculas")
+    void hasProductNamedIsCaseInsensitive() {
+        assertThat(branch.hasProductNamed("CAFÉ")).isTrue();
+        assertThat(branch.hasProductNamed("café")).isTrue();
+    }
+
+    @Test
     @DisplayName("findProductById devuelve el producto por id")
     void findProductById() {
         assertThat(branch.findProductById("p-2")).contains(pan);

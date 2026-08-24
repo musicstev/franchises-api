@@ -31,7 +31,7 @@ public class Branch {
     List<Product> products = List.of();
 
     public boolean hasProductNamed(String productName) {
-        return products.stream().anyMatch(product -> product.getName().equals(productName));
+        return products.stream().anyMatch(product -> product.getName().equalsIgnoreCase(productName));
     }
 
     public Optional<Product> findProductById(String productId) {

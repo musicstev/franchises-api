@@ -8,4 +8,8 @@ public record ProductRequest(
         @NotBlank(message = "el nombre del producto es obligatorio") String name,
         @NotNull(message = "el stock es obligatorio")
         @PositiveOrZero(message = "el stock no puede ser negativo") Integer stock) {
+
+    public ProductRequest {
+        name = name == null ? null : name.strip();
+    }
 }

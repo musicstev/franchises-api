@@ -4,4 +4,8 @@ import jakarta.validation.constraints.NotBlank;
 
 public record NameUpdateRequest(
         @NotBlank(message = "el nombre es obligatorio") String name) {
+
+    public NameUpdateRequest {
+        name = name == null ? null : name.strip();
+    }
 }

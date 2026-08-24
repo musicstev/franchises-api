@@ -4,4 +4,8 @@ import jakarta.validation.constraints.NotBlank;
 
 public record FranchiseRequest(
         @NotBlank(message = "el nombre de la franquicia es obligatorio") String name) {
+
+    public FranchiseRequest {
+        name = name == null ? null : name.strip();
+    }
 }

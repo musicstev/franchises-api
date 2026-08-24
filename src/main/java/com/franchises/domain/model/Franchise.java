@@ -35,7 +35,7 @@ public class Franchise {
     List<Branch> branches = List.of();
 
     public boolean hasBranchNamed(String branchName) {
-        return branches.stream().anyMatch(branch -> branch.getName().equals(branchName));
+        return branches.stream().anyMatch(branch -> branch.getName().equalsIgnoreCase(branchName));
     }
 
     public Optional<Branch> findBranchById(String branchId) {

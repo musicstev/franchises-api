@@ -59,7 +59,7 @@ public class FranchiseService implements FranchiseUseCase {
     @Override
     public Mono<Franchise> updateBranchName(String franchiseId, String branchId, String newName) {
         return updateExistingBranch(franchiseId, branchId,
-                (franchise, branch) -> franchise.hasBranchNamed(newName) && !branch.getName().equals(newName)
+                (franchise, branch) -> franchise.hasBranchNamed(newName) && !branch.getName().equalsIgnoreCase(newName)
                         ? Mono.error(duplicateBranch(newName))
                         : Mono.just(branch.withName(newName)));
     }
@@ -103,7 +103,7 @@ public class FranchiseService implements FranchiseUseCase {
     }
 
     private Mono<Branch> renameProduct(Branch branch, Product current, String newName) {
-        if (branch.hasProductNamed(newName) && !current.getName().equals(newName)) {
+        if (branch.hasProductNamed(newName) && !current.getName().equalsIgnoreCase(newName)) {
             return Mono.error(duplicateProduct(newName, branch.getName()));
         }
         return Mono.just(branch.replaceProduct(current.withName(newName)));

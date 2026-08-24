@@ -127,6 +127,15 @@ class FranchiseServiceTest {
     }
 
     @Test
+    @DisplayName("addBranch falla cuando el nombre ya existe salvo por mayúsculas/minúsculas")
+    void addBranchDuplicateIgnoresCase() {
+        givenFranchiseExists();
+
+        StepVerifier.create(service.addBranch(FRANCHISE_ID, "CENTRO"))
+                .verifyError(DuplicateResourceException.class);
+    }
+
+    @Test
     @DisplayName("addBranch falla cuando la franquicia no existe")
     void addBranchFranchiseNotFound() {
         givenFranchiseDoesNotExist();
@@ -167,6 +176,17 @@ class FranchiseServiceTest {
     }
 
     @Test
+    @DisplayName("updateBranchName permite renombrar a un cambio de mayúsculas del propio nombre")
+    void updateBranchNameSameNameDifferentCase() {
+        givenFranchiseExists();
+
+        StepVerifier.create(service.updateBranchName(FRANCHISE_ID, CENTRO_ID, "CENTRO"))
+                .assertNext(saved -> assertThat(saved.findBranchById(CENTRO_ID).orElseThrow().getName())
+                        .isEqualTo("CENTRO"))
+                .verifyComplete();
+    }
+
+    @Test
     @DisplayName("updateBranchName falla cuando el id de sucursal no existe")
     void updateBranchNameNotFound() {
         givenFranchiseExists();
@@ -197,6 +217,15 @@ class FranchiseServiceTest {
         givenFranchiseExists();
 
         StepVerifier.create(service.addProduct(FRANCHISE_ID, CENTRO_ID, "Café", 5))
+                .verifyError(DuplicateResourceException.class);
+    }
+
+    @Test
+    @DisplayName("addProduct falla cuando el nombre ya existe salvo por mayúsculas/minúsculas")
+    void addProductDuplicateIgnoresCase() {
+        givenFranchiseExists();
+
+        StepVerifier.create(service.addProduct(FRANCHISE_ID, CENTRO_ID, "CAFÉ", 5))
                 .verifyError(DuplicateResourceException.class);
     }
 
@@ -278,6 +307,17 @@ class FranchiseServiceTest {
 
         StepVerifier.create(service.updateProductName(FRANCHISE_ID, CENTRO_ID, CAFE_ID, "Pan"))
                 .verifyError(DuplicateResourceException.class);
+    }
+
+    @Test
+    @DisplayName("updateProductName permite renombrar a un cambio de mayúsculas del propio nombre")
+    void updateProductNameSameNameDifferentCase() {
+        givenFranchiseExists();
+
+        StepVerifier.create(service.updateProductName(FRANCHISE_ID, CENTRO_ID, CAFE_ID, "CAFÉ"))
+                .assertNext(saved -> assertThat(saved.findBranchById(CENTRO_ID).orElseThrow()
+                        .findProductById(CAFE_ID).orElseThrow().getName()).isEqualTo("CAFÉ"))
+                .verifyComplete();
     }
 
     @Test

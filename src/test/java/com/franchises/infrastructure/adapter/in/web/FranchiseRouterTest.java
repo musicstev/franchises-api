@@ -9,6 +9,7 @@ import com.franchises.domain.model.Product;
 import com.franchises.domain.model.TopStockProduct;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
 import org.springframework.context.annotation.Import;
@@ -19,8 +20,11 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @WebFluxTest
@@ -127,6 +131,22 @@ class FranchiseRouterTest {
                 .bodyValue("{\"name\":\"Norte\"}")
                 .exchange()
                 .expectStatus().isCreated();
+    }
+
+    @Test
+    @DisplayName("POST /api/franchises/{id}/branches recorta espacios del nombre antes de delegarlo")
+    void addBranchTrimsName() {
+        when(franchiseUseCase.addBranch(anyString(), anyString())).thenReturn(Mono.just(franchise));
+
+        webTestClient.post().uri("/api/franchises/{id}/branches", FRANCHISE_ID)
+                .header("Content-Type", "application/json")
+                .bodyValue("{\"name\":\"  Norte  \"}")
+                .exchange()
+                .expectStatus().isCreated();
+
+        ArgumentCaptor<String> nameCaptor = ArgumentCaptor.forClass(String.class);
+        verify(franchiseUseCase).addBranch(eq(FRANCHISE_ID), nameCaptor.capture());
+        assertThat(nameCaptor.getValue()).isEqualTo("Norte");
     }
 
     @Test

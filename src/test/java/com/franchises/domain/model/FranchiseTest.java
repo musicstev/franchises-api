@@ -39,6 +39,13 @@ class FranchiseTest {
     }
 
     @Test
+    @DisplayName("hasBranchNamed ignora mayúsculas y minúsculas")
+    void hasBranchNamedIsCaseInsensitive() {
+        assertThat(franchise.hasBranchNamed("CENTRO")).isTrue();
+        assertThat(franchise.hasBranchNamed("centro")).isTrue();
+    }
+
+    @Test
     @DisplayName("findBranchById devuelve la sucursal por id")
     void findBranchById() {
         assertThat(franchise.findBranchById("b-2")).contains(norte);
